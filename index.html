@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VeriClaim AI — Instant Motor Claim Verification</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0D141C;
+    --ink-2:#141F2B;
+    --ink-3:#1B2836;
+    --line-dark:rgba(255,255,255,.09);
+    --paper:#F1F4F7;
+    --card:#FFFFFF;
+    --line-light:#E3E8ED;
+    --text-hi-dark:#F4F7FA;
+    --text-lo-dark:#8CA0B3;
+    --text-hi-light:#101923;
+    --text-lo-light:#5C6B78;
+    --cyan:#1FBEB4;
+    --cyan-dim:rgba(31,190,180,.12);
+    --amber:#DE8C1F;
+    --amber-dim:rgba(222,140,31,.13);
+    --green:#1E9E6B;
+    --green-dim:rgba(30,158,107,.12);
+    --red:#D14A42;
+    --red-dim:rgba(209,74,66,.12);
+    --blue:#3660D8;
+    --blue-dim:rgba(54,96,216,.10);
+    --radius:14px;
+    --radius-sm:9px;
+    --font-display:'Space Grotesk',sans-serif;
+    --font-body:'Inter',sans-serif;
+    --font-mono:'IBM Plex Mono',monospace;
+    --shadow-card:0 1px 2px rgba(16,25,35,.04), 0 8px 24px -12px rgba(16,25,35,.12);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:var(--font-body);
+    background:var(--paper);
+    color:var(--text-hi-light);
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  #app{min-height:100vh;display:flex;flex-direction:column;}
+  a{color:inherit;}
+  button{font-family:inherit;cursor:pointer;}
+  ::selection{background:var(--cyan-dim);}
+
+  /* ---------- Topbar ---------- */
+  .topbar{
+    background:var(--ink);
+    color:var(--text-hi-dark);
+    display:flex;align-items:center;
+    padding:0 22px;height:64px;
+    border-bottom:1px solid var(--line-dark);
+    position:sticky;top:0;z-index:50;
+    gap:20px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+  .brand-mark{
+    width:32px;height:32px;border-radius:9px;
+    background:linear-gradient(155deg, var(--cyan), #0C6E68);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-mono);font-weight:600;font-size:13px;color:#03211F;
+    flex-shrink:0;
+  }
+  .brand-word{font-family:var(--font-display);font-weight:700;font-size:17px;letter-spacing:.2px;}
+  .brand-tag{font-family:var(--font-mono);font-size:10px;color:var(--text-lo-dark);letter-spacing:.08em;text-transform:uppercase;margin-left:2px;padding:2px 6px;border:1px solid var(--line-dark);border-radius:5px;}
+  .role-switch{
+    display:flex;background:var(--ink-2);border:1px solid var(--line-dark);border-radius:999px;padding:3px;margin:0 auto;
+  }
+  .role-switch button{
+    border:none;background:transparent;color:var(--text-lo-dark);font-size:13.5px;font-weight:600;
+    padding:8px 18px;border-radius:999px;transition:.15s;display:flex;align-items:center;gap:7px;
+  }
+  .role-switch button.active{background:var(--cyan);color:#04211E;}
+  .topbar-right{display:flex;align-items:center;gap:14px;flex-shrink:0;}
+  .env-tag{font-family:var(--font-mono);font-size:10.5px;color:var(--text-lo-dark);border:1px dashed var(--line-dark);padding:4px 9px;border-radius:7px;letter-spacing:.03em;}
+  .bell{position:relative;width:36px;height:36px;border-radius:9px;background:var(--ink-2);border:1px solid var(--line-dark);display:flex;align-items:center;justify-content:center;color:var(--text-lo-dark);}
+  .bell svg{width:17px;height:17px;}
+  .bell .dot{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 3px;font-family:var(--font-mono);}
+
+  /* ---------- Layout ---------- */
+  .main{flex:1;width:100%;max-width:1180px;margin:0 auto;padding:32px 24px 60px;}
+  .page-head{margin-bottom:26px;}
+  .eyebrow{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--cyan);font-weight:600;}
+  .page-title{font-family:var(--font-display);font-size:26px;font-weight:700;margin:4px 0 4px;color:var(--text-hi-light);}
+  .page-sub{color:var(--text-lo-light);font-size:14.5px;max-width:640px;}
+
+  .card{background:var(--card);border:1px solid var(--line-light);border-radius:var(--radius);box-shadow:var(--shadow-card);}
+  .card-pad{padding:26px;}
+
+  /* ---------- Stepper (form) ---------- */
+  .stepper{display:flex;align-items:center;margin-bottom:28px;}
+  .step{display:flex;align-items:center;gap:10px;flex:1;}
+  .step-num{width:28px;height:28px;border-radius:999px;background:var(--card);border:2px solid var(--line-light);color:var(--text-lo-light);font-family:var(--font-mono);font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.2s;}
+  .step.done .step-num{background:var(--cyan);border-color:var(--cyan);color:#04211E;}
+  .step.active .step-num{border-color:var(--cyan);color:var(--cyan);}
+  .step-label{font-size:13px;font-weight:600;color:var(--text-lo-light);white-space:nowrap;}
+  .step.active .step-label,.step.done .step-label{color:var(--text-hi-light);}
+  .step-line{flex:1;height:2px;background:var(--line-light);margin:0 12px;}
+  .step-line.done{background:var(--cyan);}
+  @media (max-width:760px){ .step-label{display:none;} }
+
+  /* ---------- Form elements ---------- */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  @media (max-width:640px){ .grid2{grid-template-columns:1fr;} }
+  .field{margin-bottom:18px;}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:var(--text-lo-light);margin-bottom:7px;letter-spacing:.01em;}
+  .field .req{color:var(--red);}
+  .field input[type=text],.field input[type=email],.field input[type=tel],.field input[type=date],.field input[type=time],.field input[type=number],.field select,.field textarea{
+    width:100%;border:1.5px solid var(--line-light);border-radius:var(--radius-sm);padding:11px 13px;font-size:14px;font-family:inherit;color:var(--text-hi-light);background:#FCFDFE;transition:.15s;
+  }
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px var(--cyan-dim);}
+  .field textarea{resize:vertical;min-height:88px;}
+  .field.err input,.field.err textarea,.field.err select{border-color:var(--red);}
+  .err-msg{color:var(--red);font-size:12px;margin-top:5px;font-weight:500;}
+  .radio-row{display:flex;gap:10px;}
+  .radio-pill{flex:1;border:1.5px solid var(--line-light);border-radius:var(--radius-sm);padding:10px;text-align:center;font-size:13.5px;font-weight:600;color:var(--text-lo-light);transition:.15s;background:#FCFDFE;}
+  .radio-pill.sel{border-color:var(--cyan);background:var(--cyan-dim);color:#0B5B55;}
+
+  .chip-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  @media (max-width:640px){ .chip-grid{grid-template-columns:repeat(2,1fr);} }
+  .chip{border:1.5px solid var(--line-light);border-radius:var(--radius-sm);padding:12px 10px;font-size:13px;font-weight:600;color:var(--text-lo-light);text-align:center;transition:.15s;background:#FCFDFE;display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .chip.sel{border-color:var(--cyan);background:var(--cyan-dim);color:#0B5B55;}
+  .chip svg{width:18px;height:18px;}
+
+  .sev-slider{width:100%;}
+  .sev-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text-lo-light);font-family:var(--font-mono);margin-top:4px;}
+
+  .upload-box{border:1.5px dashed var(--line-light);border-radius:var(--radius-sm);padding:22px;text-align:center;background:#FBFCFD;}
+  .upload-box input{display:none;}
+  .upload-btn{display:inline-flex;align-items:center;gap:7px;background:var(--ink);color:#fff;border:none;padding:9px 16px;border-radius:999px;font-size:13px;font-weight:600;}
+  .thumbs{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+  .thumb{width:64px;height:64px;border-radius:8px;object-fit:cover;border:1px solid var(--line-light);}
+  .thumb-file{width:64px;height:64px;border-radius:8px;border:1px solid var(--line-light);background:#EFF2F5;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:9px;color:var(--text-lo-light);text-align:center;padding:4px;}
+
+  /* ---------- Buttons ---------- */
+  .btn{border:none;border-radius:999px;padding:12px 22px;font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:8px;transition:.15s;}
+  .btn-primary{background:var(--ink);color:#fff;}
+  .btn-primary:hover{background:#000;}
+  .btn-ghost{background:transparent;color:var(--text-lo-light);border:1.5px solid var(--line-light);}
+  .btn-cyan{background:var(--cyan);color:#04211E;}
+  .btn-green{background:var(--green);color:#fff;}
+  .btn-amber{background:var(--amber);color:#3A2400;}
+  .btn-red{background:var(--red);color:#fff;}
+  .btn-sm{padding:8px 14px;font-size:12.5px;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+  .form-nav{display:flex;justify-content:space-between;margin-top:24px;}
+
+  /* ---------- Badges ---------- */
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:999px;font-family:var(--font-mono);letter-spacing:.01em;white-space:nowrap;}
+  .badge-cyan{background:var(--cyan-dim);color:#0B6D65;}
+  .badge-amber{background:var(--amber-dim);color:#8A5A0E;}
+  .badge-green{background:var(--green-dim);color:#146B49;}
+  .badge-red{background:var(--red-dim);color:#96332C;}
+  .badge-blue{background:var(--blue-dim);color:#254699;}
+  .badge-grey{background:#EEF1F4;color:#5C6B78;}
+  .badge-dot{width:6px;height:6px;border-radius:999px;background:currentColor;}
+
+  /* ---------- Gauge (signature element) ---------- */
+  .gauge-wrap{display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .gauge-val{font-family:var(--font-mono);font-weight:600;font-size:20px;margin-top:-38px;color:var(--text-hi-light);}
+  .gauge-label{font-size:11.5px;color:var(--text-lo-light);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-top:2px;}
+
+  /* ---------- Processing screen ---------- */
+  .processing{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:70px 20px;text-align:center;}
+  .scan-ring{width:96px;height:96px;border-radius:999px;border:3px solid var(--line-light);border-top-color:var(--cyan);animation:spin 1s linear infinite;margin-bottom:26px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .proc-line{font-family:var(--font-mono);font-size:13.5px;color:var(--text-lo-light);margin:4px 0;transition:.2s;}
+  .proc-line.done{color:var(--green);}
+  .proc-line.current{color:var(--text-hi-light);font-weight:600;}
+
+  /* ---------- Result / Summary ---------- */
+  .result-head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;margin-bottom:22px;}
+  .claim-id{font-family:var(--font-mono);font-size:13px;color:var(--text-lo-light);}
+  .claim-id b{color:var(--text-hi-light);}
+  .summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  @media (max-width:760px){ .summary-grid{grid-template-columns:1fr;} }
+  .stat-card{border:1px solid var(--line-light);border-radius:var(--radius-sm);padding:16px;background:#FCFDFE;}
+  .stat-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-lo-light);font-weight:700;margin-bottom:6px;}
+  .stat-val{font-family:var(--font-display);font-size:19px;font-weight:700;}
+
+  .reason-list{list-style:none;margin:0;padding:0;}
+  .reason-list li{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line-light);font-size:13.5px;color:var(--text-hi-light);}
+  .reason-list li:last-child{border-bottom:none;}
+  .reason-dot{width:6px;height:6px;border-radius:999px;background:var(--cyan);margin-top:7px;flex-shrink:0;}
+
+  .timeline{display:flex;align-items:center;margin:26px 0 6px;}
+  .tl-node{display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0;width:110px;}
+  .tl-dot{width:14px;height:14px;border-radius:999px;background:var(--line-light);}
+  .tl-node.done .tl-dot{background:var(--cyan);}
+  .tl-node.now .tl-dot{background:var(--amber);box-shadow:0 0 0 5px var(--amber-dim);}
+  .tl-node.deny .tl-dot{background:var(--red);}
+  .tl-txt{font-size:11.5px;font-weight:600;color:var(--text-lo-light);text-align:center;}
+  .tl-node.done .tl-txt,.tl-node.now .tl-txt{color:var(--text-hi-light);}
+  .tl-bar{flex:1;height:2px;background:var(--line-light);}
+  .tl-bar.done{background:var(--cyan);}
+
+  /* ---------- Tables (Adjuster console) ---------- */
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+  @media (max-width:760px){ .kpi-row{grid-template-columns:1fr 1fr;} }
+  .kpi{border:1px solid var(--line-light);border-radius:var(--radius);background:var(--card);padding:16px 18px;}
+  .kpi-num{font-family:var(--font-display);font-size:24px;font-weight:700;}
+  .kpi-lbl{font-size:12px;color:var(--text-lo-light);font-weight:600;margin-top:2px;}
+
+  .tabs{display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--line-light);}
+  .tab{padding:10px 4px;margin-right:18px;font-size:13.5px;font-weight:600;color:var(--text-lo-light);border-bottom:2px solid transparent;position:relative;top:1px;}
+  .tab.active{color:var(--text-hi-light);border-bottom-color:var(--ink);}
+
+  table{width:100%;border-collapse:collapse;}
+  thead th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-lo-light);padding:0 14px 10px;font-weight:700;}
+  tbody tr{background:var(--card);cursor:pointer;transition:.12s;}
+  tbody tr:hover{background:#F7FAFC;}
+  tbody td{padding:14px;border-top:1px solid var(--line-light);font-size:13.5px;}
+  tbody tr td:first-child{border-radius:0;}
+  .cust-name{font-weight:600;}
+  .cust-sub{font-size:11.5px;color:var(--text-lo-light);font-family:var(--font-mono);}
+  .empty-state{text-align:center;padding:60px 20px;color:var(--text-lo-light);}
+  .empty-state svg{width:40px;height:40px;margin-bottom:14px;opacity:.5;}
+
+  /* ---------- Drawer (claim detail) ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(10,16,22,.5);z-index:80;display:flex;justify-content:flex-end;animation:fadein .15s ease;}
+  @keyframes fadein{from{opacity:0}to{opacity:1}}
+  .drawer{width:min(560px,100%);background:var(--paper);height:100%;overflow-y:auto;box-shadow:-12px 0 40px rgba(0,0,0,.2);animation:slidein .2s ease;}
+  @keyframes slidein{from{transform:translateX(30px);opacity:0}to{transform:translateX(0);opacity:1}}
+  .drawer-head{background:var(--ink);color:#fff;padding:22px 24px;position:sticky;top:0;}
+  .drawer-close{position:absolute;top:20px;right:20px;background:var(--ink-2);border:1px solid var(--line-dark);color:var(--text-lo-dark);width:30px;height:30px;border-radius:8px;}
+  .drawer-body{padding:24px;}
+  .section-title{font-family:var(--font-display);font-weight:700;font-size:14.5px;margin:0 0 12px;display:flex;align-items:center;gap:8px;}
+  .kv{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;font-size:13px;margin-bottom:20px;}
+  .kv div span{display:block;}
+  .kv .k{color:var(--text-lo-light);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;margin-bottom:3px;}
+  .kv .v{color:var(--text-hi-light);font-weight:600;}
+  .damage-tags{display:flex;flex-wrap:wrap;gap:6px;}
+  .dtag{background:#EEF1F4;color:var(--text-hi-light);font-size:11.5px;font-weight:600;padding:5px 10px;border-radius:7px;}
+  .decision-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:16px;}
+  @media (max-width:480px){.decision-grid{grid-template-columns:1fr;}}
+  .decided-banner{padding:14px 16px;border-radius:var(--radius-sm);font-size:13.5px;font-weight:600;margin-top:10px;}
+
+  /* ---------- Toasts ---------- */
+  .toast-stack{position:fixed;bottom:22px;right:22px;z-index:200;display:flex;flex-direction:column;gap:10px;}
+  .toast{background:var(--ink);color:#fff;padding:13px 18px;border-radius:10px;font-size:13.5px;font-weight:500;box-shadow:0 10px 30px rgba(0,0,0,.25);display:flex;align-items:center;gap:10px;max-width:340px;animation:toastin .2s ease;}
+  @keyframes toastin{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .toast.success{border-left:3px solid var(--green);}
+  .toast.warn{border-left:3px solid var(--amber);}
+  .toast.danger{border-left:3px solid var(--red);}
+
+  .footer-note{text-align:center;color:var(--text-lo-light);font-size:12px;padding:20px;font-family:var(--font-mono);}
+  .link-btn{background:none;border:none;color:var(--cyan);font-weight:600;font-size:13px;text-decoration:underline;padding:0;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast-stack" id="toastStack"></div>
+
+<script>
+/* =========================================================
+   VeriClaim AI — Demo Prototype (mock AI, single-file app)
+   ========================================================= */
+
+const DAMAGE_AREAS = [
+  {key:'front_bumper', label:'Front Bumper', weight:3, low:15000, high:32000},
+  {key:'bonnet', label:'Bonnet / Hood', weight:4, low:20000, high:42000},
+  {key:'windshield', label:'Windshield', weight:2, low:8000, high:16000},
+  {key:'headlights', label:'Headlights', weight:2, low:5000, high:12000},
+  {key:'doors', label:'Doors', weight:3, low:10000, high:26000},
+  {key:'rear_bumper', label:'Rear Bumper', weight:3, low:14000, high:30000},
+  {key:'roof', label:'Roof', weight:4, low:18000, high:38000},
+  {key:'boot', label:'Boot / Trunk', weight:3, low:12000, high:24000},
+  {key:'wheels', label:'Wheels / Tyres', weight:2, low:4000, high:9500},
+  {key:'undercarriage', label:'Undercarriage', weight:5, low:16000, high:36000},
+  {key:'airbags', label:'Airbags Deployed', weight:8, low:28000, high:65000},
+  {key:'engine', label:'Engine Bay', weight:9, low:45000, high:130000},
+];
+
+const STEPS = ['Policy & Vehicle','Incident Details','Damage Assessment','Review & Submit'];
+
+let state = {
+  role: 'customer',
+  customerView: 'form', // form | processing | result | myclaims
+  formStep: 0,
+  procIndex: 0,
+  form: blankForm(),
+  claims: [],
+  claimCounter: 1042,
+  resultClaimId: null,
+  engineer: { filter: 'pending', selectedId: null, settlementDraft: '', comment: '' },
+  toasts: []
+};
+
+function blankForm(){
+  return {
+    name:'', policy:'', mobile:'', email:'', vehicleReg:'', vehicleModel:'', vehicleYear:'',
+    date:'', time:'', location:'', description:'', police:'', firNumber:'', thirdParty:'',
+    damage:[], severity:3, notes:'', photos:[], confirmed:false
+  };
+}
+
+/* ---------------- Seeded RNG for reproducible mock AI ---------------- */
+function hashStr(s){ let h=0; for(let i=0;i<s.length;i++){ h=(h*31 + s.charCodeAt(i))|0; } return Math.abs(h); }
+function mulberry32(seed){
+  return function(){
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+}
+
+/* ---------------- Mock AI Assessment Engine ---------------- */
+function runAIAssessment(f, claimId){
+  const rng = mulberry32(hashStr(claimId));
+  const selected = DAMAGE_AREAS.filter(d => f.damage.includes(d.key));
+  const weightSum = selected.reduce((a,d)=>a+d.weight,0) + Number(f.severity)*3;
+  const severityScore = Math.min(100, Math.round(weightSum * 2.1));
+  let severityLabel = 'Minor';
+  if(severityScore>85) severityLabel='Total Loss';
+  else if(severityScore>65) severityLabel='Severe';
+  else if(severityScore>40) severityLabel='Significant';
+  else if(severityScore>18) severityLabel='Moderate';
+
+  let low = selected.reduce((a,d)=>a+d.low,0);
+  let high = selected.reduce((a,d)=>a+d.high,0);
+  if(selected.length===0){ low=6000; high=15000; }
+  const jitter = 0.94 + rng()*0.14;
+  low = Math.round((low*jitter)/500)*500;
+  high = Math.round((high*(jitter+0.06))/500)*500;
+
+  const reasoning = [];
+  let fraudScore = Math.round(rng()*8);
+
+  const daysSince = f.date ? Math.floor((new Date() - new Date(f.date)) / 86400000) : 0;
+  const noPolice = f.police === 'No';
+  const shortDesc = (f.description||'').trim().length < 25;
+
+  if(selected.length>0){
+    reasoning.push(`Reported damage across ${selected.length} area(s) — ${selected.map(d=>d.label).join(', ')} — indicating ${severityLabel.toLowerCase()} repair complexity.`);
+  } else {
+    reasoning.push('No specific damage areas were selected; assessment defaults to a minimal-damage baseline estimate.');
+  }
+
+  if(noPolice && high > 100000){
+    fraudScore += 28;
+    reasoning.push('No police report (FIR) filed despite an estimated repair cost above ₹1,00,000 — flagged for manual verification.');
+  }
+  if(daysSince > 15){
+    fraudScore += 20;
+    reasoning.push(`Incident reported ${daysSince} days after occurrence — outside the standard 7–15 day reporting window.`);
+  }
+  if(shortDesc){
+    fraudScore += 14;
+    reasoning.push('Incident description lacks sufficient detail for full automated narrative verification.');
+  }
+  if(f.photos.length===0){
+    fraudScore += 8;
+    reasoning.push('No supporting photographs were attached to the claim.');
+  }
+  fraudScore = Math.min(100, Math.round(fraudScore + rng()*8));
+
+  if(reasoning.length===1){
+    reasoning.push('No anomalies detected in reporting timeline, documentation completeness, or damage-to-narrative consistency.');
+  }
+  reasoning.push(`Estimated settlement range calculated from ${selected.length || 'baseline'} verified damage component(s) using regional repair-cost benchmarks.`);
+
+  let fraudLabel = 'Low';
+  if(fraudScore>60) fraudLabel='High';
+  else if(fraudScore>30) fraudLabel='Medium';
+
+  let recommendation = 'Fast-Track Approval';
+  if(fraudLabel==='High') recommendation = 'Manual Review Required — Fraud Indicators Present';
+  else if(severityLabel==='Severe' || severityLabel==='Total Loss') recommendation = 'Manual Review Recommended — High-Value Claim';
+  else if(fraudLabel==='Medium') recommendation = 'Manual Review Recommended — Verify Details';
+
+  const confidence = Math.max(58, Math.min(98, Math.round(94 - fraudScore*0.25 - (f.photos.length===0?6:0) + rng()*4)));
+
+  return { severityScore, severityLabel, low, high, fraudScore, fraudLabel, recommendation, confidence, reasoning, days: daysSince };
+}
+
+/* ---------------- Helpers ---------------- */
+function inr(n){ return '₹' + Number(n).toLocaleString('en-IN'); }
+function fmtDate(d){ return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+function newClaimId(){ state.claimCounter += 1; return `VC-2026-${state.claimCounter}`; }
+function badgeForStatus(s){
+  const map = {
+    ai_assessed: ['badge-amber','Pending Review'],
+    approved: ['badge-green','Approved'],
+    denied: ['badge-red','Denied'],
+    more_info: ['badge-blue','More Info Requested'],
+  };
+  return map[s] || ['badge-grey', s];
+}
+function badgeForFraud(l){
+  return l==='High' ? 'badge-red' : l==='Medium' ? 'badge-amber' : 'badge-green';
+}
+function addToast(msg, type='success'){
+  const id = Date.now()+Math.random();
+  state.toasts.push({id, msg, type});
+  renderToasts();
+  setTimeout(()=>{ state.toasts = state.toasts.filter(t=>t.id!==id); renderToasts(); }, 4200);
+}
+function svgIcon(name){
+  const icons = {
+    bell:'<path d="M12 22a2.2 2.2 0 0 0 2.2-2.2h-4.4A2.2 2.2 0 0 0 12 22Zm7-6.2V11a7 7 0 0 0-5.5-6.8V3a1.5 1.5 0 0 0-3 0v1.2A7 7 0 0 0 5 11v4.8L3 18v1h18v-1l-2-2.2Z" fill="currentColor"/>',
+    check:'<path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+    car:'<path d="M5 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0Zm10 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0ZM3 17V11l2-5h14l2 5v6h-2M5 17H3m16 0h2M5 11h14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+    empty:'<path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  };
+  return `<svg viewBox="0 0 24 24">${icons[name]||''}</svg>`;
+}
+
+/* ---------------- Gauge (signature element) ---------------- */
+function renderGauge(value, label, size=150){
+  // semi-circle instrument-cluster gauge, 0-100
+  const cx=size/2, cy=size/2, r=size*0.38;
+  const startAngle = 180, endAngle = 0; // sweeps left to right across top half
+  const angle = 180 - (value/100)*180;
+  const toXY = (deg)=>{ const rad = deg*Math.PI/180; return [cx - r*Math.cos(rad), cy - r*Math.sin(rad)]; };
+  const [x1,y1] = toXY(180), [x2,y2] = toXY(0);
+  const [nx,ny] = toXY(angle);
+  const color = value>65 ? 'var(--red)' : value>35 ? 'var(--amber)' : 'var(--cyan)';
+  return `
+  <div class="gauge-wrap">
+    <svg width="${size}" height="${size*0.62}" viewBox="0 0 ${size} ${size*0.58}">
+      <path d="M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}" stroke="var(--line-light)" stroke-width="10" fill="none" stroke-linecap="round"/>
+      <path d="M ${x1} ${y1} A ${r} ${r} 0 0 1 ${nx} ${ny}" stroke="${color}" stroke-width="10" fill="none" stroke-linecap="round"/>
+      <circle cx="${cx}" cy="${cy}" r="4" fill="${color}"/>
+      <line x1="${cx}" y1="${cy}" x2="${nx + (nx-cx)*0.12}" y2="${ny + (ny-cy)*0.12}" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    </svg>
+    <div class="gauge-val">${value}</div>
+    <div class="gauge-label">${label}</div>
+  </div>`;
+}
+
+/* ---------------- Root render ---------------- */
+function render(){
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    ${renderTopbar()}
+    <div class="main">${ state.role==='customer' ? renderCustomer() : renderEngineer() }</div>
+    <div class="footer-note">VeriClaim AI — Demo Prototype · Capstone Project · All figures are simulated for demonstration purposes</div>
+    ${ state.engineer.selectedId ? renderDrawer() : '' }
+  `;
+  bindEvents();
+  renderToasts();
+}
+
+function renderTopbar(){
+  const pending = state.claims.filter(c=>c.status==='ai_assessed').length;
+  return `
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">VC</div>
+      <div class="brand-word">VeriClaim<span style="color:var(--cyan)">AI</span></div>
+      <div class="brand-tag">Motor Claims</div>
+    </div>
+    <div class="role-switch">
+      <button data-role="customer" class="${state.role==='customer'?'active':''}">Customer Portal</button>
+      <button data-role="engineer" class="${state.role==='engineer'?'active':''}">Adjuster Console</button>
+    </div>
+    <div class="topbar-right">
+      <div class="env-tag">DEMO ENVIRONMENT</div>
+      <div class="bell">${svgIcon('bell')}${pending>0?`<div class="dot">${pending}</div>`:''}</div>
+    </div>
+  </div>`;
+}
+
+/* ================= CUSTOMER ================= */
+function renderCustomer(){
+  if(state.customerView==='processing') return renderProcessing();
+  if(state.customerView==='result') return renderResult();
+  if(state.customerView==='myclaims') return renderMyClaims();
+  return renderCustomerForm();
+}
+
+function renderCustomerForm(){
+  const f = state.form;
+  return `
+  <div class="page-head">
+    <div class="eyebrow">File a Claim</div>
+    <div class="page-title">Report a Motor Accident Claim</div>
+    <div class="page-sub">Tell us what happened — VeriClaim AI will verify your details instantly and route your claim to a certified adjuster for final approval.</div>
+    <div style="margin-top:10px"><button class="link-btn" data-goto="myclaims">View my submitted claims →</button></div>
+  </div>
+  <div class="card card-pad">
+    ${renderStepper()}
+    ${ state.formStep===0 ? stepPolicy(f) : state.formStep===1 ? stepIncident(f) : state.formStep===2 ? stepDamage(f) : stepReview(f) }
+    <div class="form-nav">
+      ${ state.formStep>0 ? `<button class="btn btn-ghost" id="btnBack">Back</button>` : `<span></span>` }
+      ${ state.formStep<3 ? `<button class="btn btn-primary" id="btnNext">Continue</button>` : `<button class="btn btn-cyan" id="btnSubmit" ${!f.confirmed?'disabled':''}>Submit Claim for AI Verification</button>` }
+    </div>
+  </div>`;
+}
+
+function renderStepper(){
+  return `<div class="stepper">
+    ${STEPS.map((s,i)=>`
+      <div class="step ${i<state.formStep?'done':i===state.formStep?'active':''}">
+        <div class="step-num">${i<state.formStep?'✓':i+1}</div>
+        <div class="step-label">${s}</div>
+      </div>
+      ${i<STEPS.length-1?`<div class="step-line ${i<state.formStep?'done':''}"></div>`:''}
+    `).join('')}
+  </div>`;
+}
+
+function fieldErr(key){ return state.formErrors && state.formErrors.includes(key); }
+
+function stepPolicy(f){
+  return `
+  <div class="grid2">
+    <div class="field ${fieldErr('name')?'err':''}"><label>Full Name <span class="req">*</span></label>
+      <input type="text" data-bind="name" value="${f.name}" placeholder="e.g. Rohan Mehta">
+      ${fieldErr('name')?'<div class="err-msg">Please enter your name</div>':''}</div>
+    <div class="field ${fieldErr('policy')?'err':''}"><label>Policy Number <span class="req">*</span></label>
+      <input type="text" data-bind="policy" value="${f.policy}" placeholder="e.g. POL-88231-IN">
+      ${fieldErr('policy')?'<div class="err-msg">Policy number is required</div>':''}</div>
+    <div class="field ${fieldErr('mobile')?'err':''}"><label>Mobile Number <span class="req">*</span></label>
+      <input type="tel" data-bind="mobile" value="${f.mobile}" placeholder="10-digit mobile number">
+      ${fieldErr('mobile')?'<div class="err-msg">Mobile number is required</div>':''}</div>
+    <div class="field"><label>Email Address</label>
+      <input type="email" data-bind="email" value="${f.email}" placeholder="you@email.com"></div>
+    <div class="field ${fieldErr('vehicleReg')?'err':''}"><label>Vehicle Registration No. <span class="req">*</span></label>
+      <input type="text" data-bind="vehicleReg" value="${f.vehicleReg}" placeholder="e.g. MP04 AB 1234">
+      ${fieldErr('vehicleReg')?'<div class="err-msg">Vehicle registration is required</div>':''}</div>
+    <div class="field"><label>Vehicle Make & Model</label>
+      <input type="text" data-bind="vehicleModel" value="${f.vehicleModel}" placeholder="e.g. Hyundai Creta"></div>
+    <div class="field"><label>Year of Manufacture</label>
+      <input type="number" data-bind="vehicleYear" value="${f.vehicleYear}" placeholder="e.g. 2021" min="1990" max="2026"></div>
+  </div>`;
+}
+
+function stepIncident(f){
+  return `
+  <div class="grid2">
+    <div class="field ${fieldErr('date')?'err':''}"><label>Date of Incident <span class="req">*</span></label>
+      <input type="date" data-bind="date" value="${f.date}" max="2026-08-11">
+      ${fieldErr('date')?'<div class="err-msg">Please select the incident date</div>':''}</div>
+    <div class="field"><label>Approx. Time</label>
+      <input type="time" data-bind="time" value="${f.time}"></div>
+  </div>
+  <div class="field ${fieldErr('location')?'err':''}"><label>Location of Incident <span class="req">*</span></label>
+    <input type="text" data-bind="location" value="${f.location}" placeholder="e.g. MP Nagar Zone 2, Bhopal">
+    ${fieldErr('location')?'<div class="err-msg">Location is required</div>':''}</div>
+  <div class="field ${fieldErr('description')?'err':''}"><label>What happened? <span class="req">*</span></label>
+    <textarea data-bind="description" placeholder="Describe the accident in detail — how it happened, road/weather conditions, and any other vehicles involved.">${f.description}</textarea>
+    ${fieldErr('description')?'<div class="err-msg">Please describe the incident (min. a few words)</div>':''}</div>
+  <div class="grid2">
+    <div class="field"><label>Was a Police Report (FIR) Filed?</label>
+      <div class="radio-row">
+        <div class="radio-pill ${f.police==='Yes'?'sel':''}" data-radio="police" data-val="Yes">Yes</div>
+        <div class="radio-pill ${f.police==='No'?'sel':''}" data-radio="police" data-val="No">No</div>
+      </div></div>
+    ${ f.police==='Yes' ? `<div class="field"><label>FIR Number</label><input type="text" data-bind="firNumber" value="${f.firNumber}" placeholder="FIR reference number"></div>` :
+      `<div class="field"><label>Was a Third Party Involved?</label>
+      <div class="radio-row">
+        <div class="radio-pill ${f.thirdParty==='Yes'?'sel':''}" data-radio="thirdParty" data-val="Yes">Yes</div>
+        <div class="radio-pill ${f.thirdParty==='No'?'sel':''}" data-radio="thirdParty" data-val="No">No</div>
+      </div></div>` }
+  </div>
+  ${ f.police==='Yes' ? `<div class="field"><label>Was a Third Party Involved?</label>
+      <div class="radio-row">
+        <div class="radio-pill ${f.thirdParty==='Yes'?'sel':''}" data-radio="thirdParty" data-val="Yes">Yes</div>
+        <div class="radio-pill ${f.thirdParty==='No'?'sel':''}" data-radio="thirdParty" data-val="No">No</div>
+      </div></div>` : '' }
+  `;
+}
+
+function stepDamage(f){
+  return `
+  <div class="field"><label>Which parts of the vehicle are damaged?</label>
+    <div class="chip-grid">
+      ${DAMAGE_AREAS.map(d=>`<div class="chip ${f.damage.includes(d.key)?'sel':''}" data-damage="${d.key}">${d.label}</div>`).join('')}
+    </div>
+  </div>
+  <div class="field"><label>Overall Damage Severity (self-assessed)</label>
+    <input type="range" class="sev-slider" min="1" max="5" step="1" value="${f.severity}" data-bind="severity">
+    <div class="sev-labels"><span>Minor</span><span>Moderate</span><span>Significant</span><span>Severe</span><span>Total Loss</span></div>
+  </div>
+  <div class="field"><label>Upload Photos of the Damage</label>
+    <div class="upload-box">
+      <label class="upload-btn">📷 Choose Photos<input type="file" id="photoInput" multiple accept="image/*"></label>
+      <div style="font-size:12px;color:var(--text-lo-light);margin-top:10px;">Attach clear photos from multiple angles to speed up AI verification.</div>
+      <div class="thumbs" id="thumbHolder">
+        ${f.photos.map(p=>p.url?`<img class="thumb" src="${p.url}">`:`<div class="thumb-file">${p.name.slice(0,14)}</div>`).join('')}
+      </div>
+    </div>
+  </div>
+  <div class="field"><label>Additional Notes (optional)</label>
+    <textarea data-bind="notes" placeholder="Anything else the adjuster should know?">${f.notes}</textarea></div>
+  `;
+}
+
+function stepReview(f){
+  const dmg = DAMAGE_AREAS.filter(d=>f.damage.includes(d.key)).map(d=>d.label).join(', ') || 'None specified';
+  return `
+  <div class="kv" style="margin-bottom:10px">
+    <div><span class="k">Name</span><span class="v">${f.name||'—'}</span></div>
+    <div><span class="k">Policy No.</span><span class="v">${f.policy||'—'}</span></div>
+    <div><span class="k">Vehicle</span><span class="v">${f.vehicleModel||'—'} (${f.vehicleReg||'—'})</span></div>
+    <div><span class="k">Incident Date</span><span class="v">${f.date?fmtDate(f.date):'—'}</span></div>
+    <div><span class="k">Location</span><span class="v">${f.location||'—'}</span></div>
+    <div><span class="k">Police Report</span><span class="v">${f.police||'—'}</span></div>
+    <div style="grid-column:1/-1"><span class="k">Damaged Areas</span><span class="v">${dmg}</span></div>
+    <div style="grid-column:1/-1"><span class="k">Description</span><span class="v" style="font-weight:400">${f.description||'—'}</span></div>
+    <div><span class="k">Photos Attached</span><span class="v">${f.photos.length}</span></div>
+  </div>
+  <label style="display:flex;align-items:flex-start;gap:10px;font-size:13.5px;color:var(--text-hi-light);cursor:pointer;">
+    <input type="checkbox" id="confirmChk" ${f.confirmed?'checked':''} style="margin-top:3px;">
+    I confirm the information provided above is true and accurate to the best of my knowledge.
+  </label>`;
+}
+
+function renderProcessing(){
+  const lines = [
+    'Validating policy & customer details…',
+    'Cross-referencing vehicle & incident records…',
+    'Analyzing reported damage & photos…',
+    'Estimating repair cost range…',
+    'Running fraud risk scan…',
+    'Compiling report for adjuster review…'
+  ];
+  return `
+  <div class="card card-pad processing">
+    <div class="scan-ring"></div>
+    <div class="page-title" style="font-size:19px;margin-bottom:18px;">AI Verification in Progress</div>
+    ${lines.map((l,i)=>`<div class="proc-line ${i<state.procIndex?'done':i===state.procIndex?'current':''}">${i<state.procIndex?'✓ ':''}${l}</div>`).join('')}
+  </div>`;
+}
+
+function renderResult(){
+  const c = state.claims.find(c=>c.id===state.resultClaimId);
+  if(!c) return renderCustomerForm();
+  const stage = 2; // Submitted(0) -> AI Assessed(1) -> Engineer Review(2)
+  return `
+  <div class="page-head">
+    <div class="eyebrow">Claim Submitted</div>
+    <div class="page-title">Your claim has been verified by VeriClaim AI</div>
+    <div class="page-sub">A certified adjuster has been notified and will review your claim shortly.</div>
+  </div>
+  <div class="card card-pad">
+    <div class="result-head">
+      <div class="claim-id">Claim ID <b>${c.id}</b> · Filed ${fmtDate(c.submittedAt)}</div>
+      <span class="badge ${badgeForStatus(c.status)[0]}"><span class="badge-dot"></span>${badgeForStatus(c.status)[1]}</span>
+    </div>
+    ${renderCustomerTimeline(c)}
+    <div class="summary-grid" style="margin-top:24px;">
+      <div class="stat-card"><div class="stat-label">Estimated Settlement</div><div class="stat-val">${inr(c.ai.low)} – ${inr(c.ai.high)}</div></div>
+      <div class="stat-card"><div class="stat-label">Damage Severity</div><div class="stat-val">${c.ai.severityLabel}</div></div>
+      <div class="stat-card"><div class="stat-label">Expected Turnaround</div><div class="stat-val">${c.ai.fraudLabel==='High'?'3–5 days':'24–48 hrs'}</div></div>
+    </div>
+    <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--line-light);">
+      <button class="btn btn-primary" id="btnNewClaim">File Another Claim</button>
+      <button class="btn btn-ghost" data-goto="myclaims">View My Claims</button>
+    </div>
+  </div>`;
+}
+
+function renderCustomerTimeline(c){
+  const order = ['submitted','ai_assessed','review','decision'];
+  let idx = 2; let denyMode=false;
+  if(c.status==='approved'){ idx=3; }
+  else if(c.status==='denied'){ idx=3; denyMode=true; }
+  else if(c.status==='more_info'){ idx=3; }
+  const labels = ['Submitted','AI Assessed', 'Engineer Review', c.status==='approved'?'Approved & Settled': c.status==='denied'?'Claim Denied': c.status==='more_info'?'More Info Needed':'Decision Pending'];
+  return `<div class="timeline">
+    ${labels.map((l,i)=>`
+      <div class="tl-node ${i<idx?'done':i===idx?(denyMode?'deny':'now'):''}">
+        <div class="tl-dot"></div><div class="tl-txt">${l}</div>
+      </div>
+      ${i<labels.length-1?`<div class="tl-bar ${i<idx?'done':''}"></div>`:''}
+    `).join('')}
+  </div>`;
+}
+
+function renderMyClaims(){
+  const claims = state.claims;
+  return `
+  <div class="page-head">
+    <div class="eyebrow">My Claims</div>
+    <div class="page-title">Submitted Claims</div>
+    <div class="page-sub">Track the status of every claim you've filed this session.</div>
+    <div style="margin-top:10px"><button class="link-btn" data-goto="form">← File a new claim</button></div>
+  </div>
+  ${ claims.length===0 ? `<div class="card"><div class="empty-state">${svgIcon('empty')}<div>No claims filed yet.</div></div></div>` :
+  `<div class="card" style="overflow:hidden;">
+    <table>
+      <thead><tr><th>Claim ID</th><th>Vehicle</th><th>Filed</th><th>Est. Settlement</th><th>Status</th></tr></thead>
+      <tbody>
+      ${claims.slice().reverse().map(c=>`
+        <tr data-view-result="${c.id}">
+          <td style="font-family:var(--font-mono)">${c.id}</td>
+          <td>${c.vehicleModel||'—'} <span class="cust-sub">${c.vehicleReg}</span></td>
+          <td>${fmtDate(c.submittedAt)}</td>
+          <td>${inr(c.ai.low)} – ${inr(c.ai.high)}</td>
+          <td><span class="badge ${badgeForStatus(c.status)[0]}">${badgeForStatus(c.status)[1]}</span></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>` }`;
+}
+
+/* ================= ENGINEER / ADJUSTER ================= */
+function renderEngineer(){
+  const all = state.claims;
+  const pending = all.filter(c=>c.status==='ai_assessed').length;
+  const approved = all.filter(c=>c.status==='approved').length;
+  const denied = all.filter(c=>c.status==='denied').length;
+  const highRisk = all.filter(c=>c.ai.fraudLabel==='High').length;
+
+  const filters = [
+    {key:'all', label:'All Claims'},
+    {key:'ai_assessed', label:'Pending Review'},
+    {key:'approved', label:'Approved'},
+    {key:'denied', label:'Denied'},
+    {key:'more_info', label:'More Info'},
+  ];
+  let list = all;
+  if(state.engineer.filter!=='all') list = all.filter(c=>c.status===state.engineer.filter);
+
+  return `
+  <div class="page-head">
+    <div class="eyebrow">Adjuster Console</div>
+    <div class="page-title">Claims Verification Queue</div>
+    <div class="page-sub">Review AI-generated assessments, verify the details, and approve or deny each settlement.</div>
+  </div>
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-num">${pending}</div><div class="kpi-lbl">Pending Review</div></div>
+    <div class="kpi"><div class="kpi-num">${approved}</div><div class="kpi-lbl">Approved</div></div>
+    <div class="kpi"><div class="kpi-num">${denied}</div><div class="kpi-lbl">Denied</div></div>
+    <div class="kpi"><div class="kpi-num" style="color:${highRisk>0?'var(--red)':'inherit'}">${highRisk}</div><div class="kpi-lbl">High Fraud Risk</div></div>
+  </div>
+  <div class="tabs">
+    ${filters.map(fl=>`<div class="tab ${state.engineer.filter===fl.key?'active':''}" data-filter="${fl.key}">${fl.label}</div>`).join('')}
+  </div>
+  ${ list.length===0 ? `<div class="card"><div class="empty-state">${svgIcon('empty')}<div>No claims in this view yet. Ask a customer to file a claim from the Customer Portal.</div></div></div>` :
+  `<div class="card" style="overflow:hidden;">
+    <table>
+      <thead><tr><th>Claim ID</th><th>Customer</th><th>Filed</th><th>AI Recommendation</th><th>Fraud Risk</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      ${list.slice().reverse().map(c=>`
+        <tr data-open="${c.id}">
+          <td style="font-family:var(--font-mono)">${c.id}</td>
+          <td><div class="cust-name">${c.name}</div><div class="cust-sub">${c.vehicleReg}</div></td>
+          <td>${fmtDate(c.submittedAt)}</td>
+          <td style="max-width:200px;font-size:12.5px;">${c.ai.recommendation}</td>
+          <td><span class="badge ${badgeForFraud(c.ai.fraudLabel)}">${c.ai.fraudLabel}</span></td>
+          <td><span class="badge ${badgeForStatus(c.status)[0]}">${badgeForStatus(c.status)[1]}</span></td>
+          <td><button class="btn btn-ghost btn-sm" data-open="${c.id}">Review</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>` }`;
+}
+
+function renderDrawer(){
+  const c = state.claims.find(c=>c.id===state.engineer.selectedId);
+  if(!c) return '';
+  const decided = c.status!=='ai_assessed';
+  const dmg = DAMAGE_AREAS.filter(d=>c.damage.includes(d.key));
+  return `
+  <div class="overlay" id="drawerOverlay">
+    <div class="drawer" onclick="event.stopPropagation()">
+      <div class="drawer-head">
+        <button class="drawer-close" id="drawerClose">✕</button>
+        <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-lo-dark)">${c.id}</div>
+        <div style="font-family:var(--font-display);font-weight:700;font-size:19px;margin-top:2px;">${c.name}</div>
+        <div style="font-size:13px;color:var(--text-lo-dark);margin-top:4px;">${c.vehicleModel} · ${c.vehicleReg}</div>
+        <div style="margin-top:10px;"><span class="badge ${badgeForStatus(c.status)[0]}">${badgeForStatus(c.status)[1]}</span></div>
+      </div>
+      <div class="drawer-body">
+
+        <div class="section-title">📋 Claim Details</div>
+        <div class="kv">
+          <div><span class="k">Policy No.</span><span class="v">${c.policy}</span></div>
+          <div><span class="k">Mobile</span><span class="v">${c.mobile}</span></div>
+          <div><span class="k">Incident Date</span><span class="v">${fmtDate(c.date)}</span></div>
+          <div><span class="k">Location</span><span class="v">${c.location}</span></div>
+          <div><span class="k">Police Report</span><span class="v">${c.police}${c.firNumber?` (${c.firNumber})`:''}</span></div>
+          <div><span class="k">Third Party</span><span class="v">${c.thirdParty||'—'}</span></div>
+        </div>
+        <div style="font-size:13.5px;color:var(--text-hi-light);background:#F7FAFC;border:1px solid var(--line-light);border-radius:9px;padding:12px;margin-bottom:20px;">${c.description}</div>
+
+        <div class="section-title">🚗 Reported Damage</div>
+        <div class="damage-tags" style="margin-bottom:20px;">
+          ${ dmg.length ? dmg.map(d=>`<span class="dtag">${d.label}</span>`).join('') : '<span class="dtag">None specified</span>' }
+        </div>
+
+        <div class="section-title">🧠 AI Assessment & Reasoning</div>
+        <div style="display:flex;gap:18px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+          ${renderGauge(c.ai.fraudScore, 'Fraud Risk Score', 130)}
+          ${renderGauge(c.ai.severityScore, 'Damage Severity', 130)}
+          <div style="flex:1;min-width:140px;">
+            <div class="stat-label">AI Confidence</div>
+            <div class="stat-val" style="margin-bottom:10px;">${c.ai.confidence}%</div>
+            <div class="stat-label">Recommendation</div>
+            <div style="font-size:13px;font-weight:600;">${c.ai.recommendation}</div>
+          </div>
+        </div>
+        <ul class="reason-list" style="margin-bottom:20px;">
+          ${c.ai.reasoning.map(r=>`<li><div class="reason-dot"></div>${r}</li>`).join('')}
+        </ul>
+
+        <div class="section-title">💰 Settlement Verification</div>
+        <div class="field">
+          <label>AI-Estimated Range: ${inr(c.ai.low)} – ${inr(c.ai.high)}</label>
+          <input type="number" id="settlementInput" value="${c.engineer && c.engineer.settlementAmount ? c.engineer.settlementAmount : Math.round((c.ai.low+c.ai.high)/2)}" ${decided?'disabled':''}>
+        </div>
+        <div class="field">
+          <label>Adjuster Comments</label>
+          <textarea id="commentInput" placeholder="Add verification notes for the record…" ${decided?'disabled':''}>${c.engineer?c.engineer.comments||'':''}</textarea>
+        </div>
+
+        ${ decided ? `
+          <div class="decided-banner" style="background:${c.status==='approved'?'var(--green-dim)':c.status==='denied'?'var(--red-dim)':'var(--blue-dim)'};color:${c.status==='approved'?'#146B49':c.status==='denied'?'#96332C':'#254699'}">
+            Decision recorded: <b>${badgeForStatus(c.status)[1]}</b>${c.engineer&&c.engineer.decisionAt?` on ${fmtDate(c.engineer.decisionAt)}`:''}. Customer has been notified.
+          </div>` :
+          `<div class="decision-grid">
+            <button class="btn btn-green" data-decide="approved">✓ Approve</button>
+            <button class="btn btn-amber" data-decide="more_info">? More Info</button>
+            <button class="btn btn-red" data-decide="denied">✕ Deny</button>
+          </div>` }
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------------- Toasts ---------------- */
+function renderToasts(){
+  const el = document.getElementById('toastStack');
+  if(!el) return;
+  el.innerHTML = state.toasts.map(t=>`<div class="toast ${t.type}">${t.msg}</div>`).join('');
+}
+
+/* ---------------- Events ---------------- */
+function bindEvents(){
+  document.querySelectorAll('[data-role]').forEach(b=>b.onclick = ()=>{ state.role=b.dataset.role; render(); });
+  document.querySelectorAll('[data-goto]').forEach(b=>b.onclick = ()=>{
+    if(b.dataset.goto==='form'){ state.customerView='form'; state.formStep=0; state.form=blankForm(); }
+    else state.customerView=b.dataset.goto;
+    render();
+  });
+  document.querySelectorAll('[data-view-result]').forEach(r=>r.onclick = ()=>{ state.resultClaimId=r.dataset.viewResult; state.customerView='result'; render(); });
+
+  // form field binds
+  document.querySelectorAll('[data-bind]').forEach(el=>{
+    const ev = el.type==='range' ? 'input' : 'input';
+    el.addEventListener(ev, ()=>{ state.form[el.dataset.bind] = el.value; if(el.type==='range'){ render(); } });
+  });
+  document.querySelectorAll('[data-radio]').forEach(el=>{
+    el.onclick = ()=>{ state.form[el.dataset.radio] = el.dataset.val; render(); };
+  });
+  document.querySelectorAll('[data-damage]').forEach(el=>{
+    el.onclick = ()=>{
+      const k = el.dataset.damage; const idx = state.form.damage.indexOf(k);
+      if(idx>-1) state.form.damage.splice(idx,1); else state.form.damage.push(k);
+      render();
+    };
+  });
+  const photoInput = document.getElementById('photoInput');
+  if(photoInput) photoInput.addEventListener('change', (e)=>{
+    Array.from(e.target.files).forEach(file=>{
+      if(file.type.startsWith('image/')){
+        const url = URL.createObjectURL(file);
+        state.form.photos.push({name:file.name, url});
+      } else {
+        state.form.photos.push({name:file.name});
+      }
+    });
+    render();
+  });
+  const chk = document.getElementById('confirmChk');
+  if(chk) chk.onchange = ()=>{ state.form.confirmed = chk.checked; render(); };
+
+  const btnBack = document.getElementById('btnBack');
+  if(btnBack) btnBack.onclick = ()=>{ state.formStep = Math.max(0,state.formStep-1); render(); };
+  const btnNext = document.getElementById('btnNext');
+  if(btnNext) btnNext.onclick = ()=>{
+    const errs = validateStep(state.formStep);
+    if(errs.length){ state.formErrors = errs; render(); return; }
+    state.formErrors = [];
+    state.formStep = Math.min(3, state.formStep+1);
+    render();
+  };
+  const btnSubmit = document.getElementById('btnSubmit');
+  if(btnSubmit) btnSubmit.onclick = submitClaim;
+  const btnNewClaim = document.getElementById('btnNewClaim');
+  if(btnNewClaim) btnNewClaim.onclick = ()=>{ state.customerView='form'; state.formStep=0; state.form=blankForm(); render(); };
+
+  // engineer
+  document.querySelectorAll('[data-filter]').forEach(t=>t.onclick=()=>{ state.engineer.filter = t.dataset.filter; render(); });
+  document.querySelectorAll('[data-open]').forEach(t=>t.onclick=()=>{ state.engineer.selectedId = t.dataset.open; render(); });
+  const drawerClose = document.getElementById('drawerClose');
+  if(drawerClose) drawerClose.onclick = ()=>{ state.engineer.selectedId=null; render(); };
+  const overlay = document.getElementById('drawerOverlay');
+  if(overlay) overlay.addEventListener('click', (e)=>{ if(e.target.id==='drawerOverlay'){ state.engineer.selectedId=null; render(); } });
+  document.querySelectorAll('[data-decide]').forEach(b=>b.onclick=()=>decide(b.dataset.decide));
+}
+
+function validateStep(step){
+  const f = state.form; const errs = [];
+  if(step===0){ if(!f.name) errs.push('name'); if(!f.policy) errs.push('policy'); if(!f.mobile) errs.push('mobile'); if(!f.vehicleReg) errs.push('vehicleReg'); }
+  if(step===1){ if(!f.date) errs.push('date'); if(!f.location) errs.push('location'); if(!f.description || f.description.trim().length<5) errs.push('description'); }
+  return errs;
+}
+
+function submitClaim(){
+  const id = newClaimId();
+  const f = state.form;
+  const ai = runAIAssessment(f, id);
+  const claim = { id, ...JSON.parse(JSON.stringify({...f, photos:undefined})), photos: f.photos, submittedAt: new Date().toISOString(), status:'processing_temp', ai:null, engineer:{settlementAmount:null, comments:'', decisionAt:null} };
+  state._pendingClaim = claim;
+  state._pendingAI = ai;
+  state.customerView = 'processing';
+  state.procIndex = 0;
+  render();
+  runProcessingSequence();
+}
+
+function runProcessingSequence(){
+  const total = 6;
+  const step = ()=>{
+    state.procIndex += 1;
+    render();
+    if(state.procIndex < total){
+      setTimeout(step, 550 + Math.random()*250);
+    } else {
+      setTimeout(()=>{
+        const claim = state._pendingClaim;
+        claim.ai = state._pendingAI;
+        claim.status = 'ai_assessed';
+        state.claims.push(claim);
+        state.resultClaimId = claim.id;
+        state.customerView = 'result';
+        render();
+        addToast(`New claim ${claim.id} sent to Adjuster Console for verification.`, 'success');
+      }, 500);
+    }
+  };
+  setTimeout(step, 500);
+}
+
+function decide(outcome){
+  const c = state.claims.find(c=>c.id===state.engineer.selectedId);
+  if(!c) return;
+  const amt = document.getElementById('settlementInput') ? document.getElementById('settlementInput').value : null;
+  const comment = document.getElementById('commentInput') ? document.getElementById('commentInput').value : '';
+  c.status = outcome;
+  c.engineer = { settlementAmount: amt, comments: comment, decisionAt: new Date().toISOString() };
+  render();
+  const msgMap = {
+    approved: `Claim ${c.id} approved for ${inr(amt)}. Customer notified via SMS & email.`,
+    denied: `Claim ${c.id} denied. Customer notified with reason.`,
+    more_info: `Additional information requested for ${c.id}. Customer notified.`
+  };
+  const typeMap = {approved:'success', denied:'danger', more_info:'warn'};
+  addToast(msgMap[outcome], typeMap[outcome]);
+}
+
+render();
+</script>
+</body>
+</html>
