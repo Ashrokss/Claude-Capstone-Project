@@ -54,6 +54,11 @@ class Settings(BaseSettings):
 
     # Logging
     log_level: str = "INFO"
+    # Deliberately independent of `debug`. SQLAlchemy's echo logs every
+    # statement together with its bound parameters, which for this schema means
+    # claimant names, emails and phone numbers written to the log file. Turning
+    # on debug logging should not imply that.
+    sql_echo: bool = False
 
     # CORS
     frontend_url: str = "http://localhost:3000"

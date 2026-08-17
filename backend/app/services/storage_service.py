@@ -74,6 +74,25 @@ def _require_config() -> tuple[str, str]:
     return url, key
 
 
+def _auth_headers(key: str) -> dict[str, str]:
+    """
+    Build the auth headers the Storage object API requires.
+
+    Both headers are sent deliberately. Supabase's newer `sb_secret_…` keys are
+    opaque, and the object API rejects them in `Authorization` alone with
+    "Invalid Compact JWS" because it tries to parse that header as a JWT; they
+    must arrive in `apikey`. Legacy `service_role` keys are JWTs and work in
+    either. Sending both supports whichever key format the project uses.
+
+    Args:
+        key: The service role or secret key.
+
+    Returns:
+        Headers to attach to a Storage request.
+    """
+    return {"apikey": key, "Authorization": f"Bearer {key}"}
+
+
 def sanitise_filename(name: str) -> str:
     """
     Reduce a client filename to something safe to store.
@@ -191,7 +210,7 @@ async def upload(payload: bytes, path: str, mime_type: str) -> StoredFile:
             endpoint,
             content=payload,
             headers={
-                "Authorization": f"Bearer {key}",
+                **_auth_headers(key),
                 "Content-Type": mime_type,
                 "x-upsert": "false",
             },
@@ -238,7 +257,7 @@ async def signed_url(path: str, ttl_seconds: Optional[int] = None) -> Optional[s
             response = await client.post(
                 endpoint,
                 json={"expiresIn": ttl},
-                headers={"Authorization": f"Bearer {key}"},
+                headers=_auth_headers(key),
             )
         if response.status_code >= 400:
             logger.warning("Could not sign %s: %s", path, response.text[:200])
@@ -267,9 +286,7 @@ async def delete(path: str) -> bool:
     endpoint = f"{base}/storage/v1/object/{settings.storage_bucket}/{path}"
     try:
         async with httpx.AsyncClient(timeout=settings.ai_request_timeout_seconds) as client:
-            response = await client.delete(
-                endpoint, headers={"Authorization": f"Bearer {key}"}
-            )
+            response = await client.delete(endpoint, headers=_auth_headers(key))
         # 404 means the goal state already holds.
         return response.status_code < 400 or response.status_code == 404
     except httpx.HTTPError:
@@ -295,9 +312,7 @@ async def download(path: str) -> Optional[bytes]:
     endpoint = f"{base}/storage/v1/object/{settings.storage_bucket}/{path}"
     try:
         async with httpx.AsyncClient(timeout=settings.ai_request_timeout_seconds) as client:
-            response = await client.get(
-                endpoint, headers={"Authorization": f"Bearer {key}"}
-            )
+            response = await client.get(endpoint, headers=_auth_headers(key))
         if response.status_code >= 400:
             logger.warning("Could not download %s: %s", path, response.status_code)
             return None

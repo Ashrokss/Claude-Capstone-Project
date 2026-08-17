@@ -17,8 +17,8 @@ import logging
 from typing import Optional
 from uuid import UUID
 
+import app.core.database as database
 from app.core.config import settings
-from app.core.database import AsyncSessionLocal
 from app.schemas.enums import AssessmentStatus, ClaimStatus
 from app.services import claim_service
 from app.services.ai.orchestrator import AIOrchestrator
@@ -64,6 +64,29 @@ class AnalysisQueue:
     def is_running(self) -> bool:
         """Return whether workers are currently active."""
         return bool(self._workers)
+
+    @staticmethod
+    def _session_factory():
+        """
+        Resolve the session factory at call time.
+
+        `app.core.database.AsyncSessionLocal` is None until `init_async_engine()`
+        runs during startup, and that call rebinds the name in its own module.
+        A `from ... import AsyncSessionLocal` here would capture the None and
+        never see the real factory, so the module is dereferenced on each use.
+
+        Returns:
+            The async session factory.
+
+        Raises:
+            RuntimeError: If the engine has not been initialised.
+        """
+        factory = database.AsyncSessionLocal
+        if factory is None:
+            raise RuntimeError(
+                "Async engine not initialised; cannot run analysis jobs"
+            )
+        return factory
 
     async def enqueue_analysis(self, claim_id: UUID) -> bool:
         """
@@ -113,7 +136,7 @@ class AnalysisQueue:
         for attempt in range(1, attempts + 1):
             try:
                 async with asyncio.timeout(settings.ai_job_timeout_seconds):
-                    async with AsyncSessionLocal() as session:
+                    async with self._session_factory()() as session:
                         await self._orchestrator.analyze_claim(session, claim_id)
                 return
             except asyncio.CancelledError:
@@ -144,7 +167,7 @@ class AnalysisQueue:
         returned to PENDING_REVIEW for a human to pick up.
         """
         try:
-            async with AsyncSessionLocal() as session:
+            async with self._session_factory()() as session:
                 assessment = await claim_service.latest_assessment(session, claim_id)
                 if assessment is not None:
                     assessment.assessment_status = AssessmentStatus.FAILED.value

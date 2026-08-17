@@ -156,7 +156,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
 
 ## Phase 4: File Upload and Storage
 
-- [-] 18. Implement file upload infrastructure (Supabase Storage or S3)
+- [x] 18. Implement file upload infrastructure (Supabase Storage or S3)
   - Create `app/services/storage_service.py` with upload/download methods
   - Configure Supabase Storage bucket or AWS S3 bucket
   - Implement file path generation: `claims/{claim_id}/documents/` and `claims/{claim_id}/images/`
@@ -164,7 +164,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
   - Implement file format validation for images (JPG, JPEG, PNG) and documents (PDF, JPG, JPEG, PNG)
   - _Requirements: 2.2, 2.3, 2.4, 2.5_
 
-- [-] 19. Implement POST /api/claims/{claim_id}/documents endpoint
+- [x] 19. Implement POST /api/claims/{claim_id}/documents endpoint
   - Create route accepting multipart form data: file and document_type
   - Validate file size and format
   - Call storage_service to upload file
@@ -173,7 +173,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
   - Return document object with id and file_path
   - _Requirements: 2.6, 2.7, 2.8, 2.9, 2.11_
 
-- [-] 20. Implement POST /api/claims/{claim_id}/images endpoint
+- [x] 20. Implement POST /api/claims/{claim_id}/images endpoint
   - Create route accepting multipart form data: file
   - Validate image file format and size
   - Call storage_service to upload file
@@ -182,7 +182,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
   - Return image object with id and file_path
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 5.1_
 
-- [-] 21. Implement DELETE /api/claims/{claim_id}/documents/{document_id} endpoint
+- [x] 21. Implement DELETE /api/claims/{claim_id}/documents/{document_id} endpoint
   - Create route accepting claim_id and document_id
   - Verify document belongs to claim
   - Delete document record from database
@@ -190,7 +190,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
   - Return success response
   - _Requirements: 2.9_
 
-- [-] 22. Implement DELETE /api/claims/{claim_id}/images/{image_id} endpoint
+- [x] 22. Implement DELETE /api/claims/{claim_id}/images/{image_id} endpoint
   - Create route accepting claim_id and image_id
   - Verify image belongs to claim
   - Delete image record from database

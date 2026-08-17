@@ -129,3 +129,49 @@ class TestSslModeTranslation:
         db = db_module(DIRECT)
         _, ssl_value = db._split_sslmode(db._base_url())
         assert ssl_value is None
+
+
+class TestJobQueueSessionBinding:
+    """
+    The analysis queue must resolve the session factory at call time.
+
+    `AsyncSessionLocal` is None until `init_async_engine()` runs, and that call
+    rebinds the name inside `app.core.database`. A `from ... import` in the queue
+    module would capture the None permanently, so every job would die with
+    "'NoneType' object is not callable" while the API still reported the claim as
+    queued. That failed silently once already.
+    """
+
+    def test_queue_does_not_import_the_factory_by_value(self):
+        import pathlib
+
+        source = pathlib.Path("app/services/job_queue.py").read_text(encoding="utf-8")
+        assert "from app.core.database import AsyncSessionLocal" not in source
+
+    def test_factory_lookup_raises_clearly_when_uninitialised(self, db_module):
+        db_module(PLACEHOLDER)
+        # Reloaded with no engine, so the factory is absent.
+        import importlib
+        import sys
+
+        sys.modules.pop("app.services.job_queue", None)
+        job_queue = importlib.import_module("app.services.job_queue")
+
+        with pytest.raises(RuntimeError, match="not initialised"):
+            job_queue.analysis_queue._session_factory()
+
+    def test_factory_is_found_once_the_engine_is_initialised(self, db_module):
+        import importlib
+        import sys
+
+        db = db_module(DIRECT)
+        sys.modules.pop("app.services.job_queue", None)
+        job_queue = importlib.import_module("app.services.job_queue")
+
+        # Stand in for what init_async_engine() assigns at startup.
+        db.AsyncSessionLocal = lambda: None
+        try:
+            assert job_queue.analysis_queue._session_factory() is db.AsyncSessionLocal
+        finally:
+            db.AsyncSessionLocal = None
+            sys.modules.pop("app.services.job_queue", None)

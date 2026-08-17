@@ -46,7 +46,9 @@ class DatabaseConfig:
     POOL_TIMEOUT = 30
     POOL_RECYCLE = 1800  # Recycle before Supabase's idle timeout.
     POOL_PRE_PING = True  # Discard connections dropped by the pooler.
-    ECHO = settings.debug
+    # Not tied to `debug`: echo writes bound parameters, and this schema's
+    # parameters are claimant PII. Enable with SQL_ECHO=true when needed.
+    ECHO = settings.sql_echo
 
     CONNECT_TIMEOUT = 10  # Seconds to establish a TCP/auth handshake.
     COMMAND_TIMEOUT = 30  # Client-side cap on a single command, in seconds.

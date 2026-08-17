@@ -423,3 +423,66 @@ class TestOrchestratorRobustness:
         assert _truncate(None, 10) is None
         assert _truncate("   ", 10) is None
         assert _truncate("  hello  ", 3) == "hel"
+
+
+class TestStorageAuthHeaders:
+    """
+    Supabase's newer `sb_secret_…` keys are opaque, not JWTs. The Storage object
+    API rejects them in `Authorization` alone with "Invalid Compact JWS", so the
+    key must also travel in `apikey`. This regressed once already.
+    """
+
+    def test_apikey_header_is_always_sent(self):
+        headers = storage_service._auth_headers("sb_secret_example")
+        assert headers["apikey"] == "sb_secret_example"
+
+    def test_authorization_is_also_sent_for_legacy_jwt_keys(self):
+        headers = storage_service._auth_headers("sb_secret_example")
+        assert headers["Authorization"] == "Bearer sb_secret_example"
+
+    @pytest.mark.asyncio
+    async def test_every_storage_call_includes_apikey(self, monkeypatch):
+        seen: list[dict] = []
+
+        def handler(request):
+            seen.append(dict(request.headers))
+            if request.method == "POST" and "/sign/" in str(request.url):
+                return httpx.Response(200, json={"signedURL": "/object/sign/x?token=y"})
+            return httpx.Response(200, content=b"data")
+
+        monkeypatch.setattr(httpx, "AsyncClient", _mock_transport(handler))
+        monkeypatch.setattr(
+            "app.services.storage_service.settings.supabase_url",
+            "https://example.supabase.co",
+        )
+        monkeypatch.setattr(
+            "app.services.storage_service.settings.supabase_service_role_key",
+            "sb_secret_test",
+        )
+
+        await storage_service.upload(b"\xff\xd8\xff body", "claims/x/images/a.jpg", "image/jpeg")
+        await storage_service.download("claims/x/images/a.jpg")
+        await storage_service.signed_url("claims/x/images/a.jpg")
+        await storage_service.delete("claims/x/images/a.jpg")
+
+        assert len(seen) == 4
+        for headers in seen:
+            assert headers.get("apikey") == "sb_secret_test"
+
+    @pytest.mark.asyncio
+    async def test_missing_key_disables_uploads_rather_than_failing_open(self, monkeypatch):
+        monkeypatch.setattr(
+            "app.services.storage_service.settings.supabase_service_role_key", ""
+        )
+        with pytest.raises(storage_service.StorageNotConfigured):
+            await storage_service.upload(b"x", "p", "image/jpeg")
+
+    @pytest.mark.asyncio
+    async def test_read_helpers_degrade_quietly_when_unconfigured(self, monkeypatch):
+        # A missing key must not turn a claim page into a 500.
+        monkeypatch.setattr(
+            "app.services.storage_service.settings.supabase_service_role_key", ""
+        )
+        assert await storage_service.download("p") is None
+        assert await storage_service.signed_url("p") is None
+        assert await storage_service.delete("p") is False
