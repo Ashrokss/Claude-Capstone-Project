@@ -304,7 +304,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
 
 ## Phase 8: Frontend Setup and Routing
 
-- [ ] 32. Initialize Next.js project with TypeScript and Tailwind CSS
+- [x] 32. Initialize Next.js project with TypeScript and Tailwind CSS
   - Create Next.js project with `npx create-next-app@latest --typescript --tailwind`
   - Set up directory structure: `src/pages/`, `src/components/`, `src/hooks/`, `src/lib/`, `src/styles/`
   - Configure `.env.local` with NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -313,7 +313,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
   - Install dependencies: @supabase/auth-helpers-nextjs, zustand or context for state management
   - _Requirements: None (infrastructure setup)_
 
-- [ ] 33. Set up Supabase authentication and authentication guard
+- [x] 33. Set up Supabase authentication and authentication guard
   - Create `src/lib/supabase-client.ts` to initialize Supabase client
   - Create `src/hooks/useAuth.ts` hook to access current user and authentication status
   - Create `src/components/ProtectedRoute.tsx` component to guard routes by user role
@@ -322,7 +322,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
   - Store JWT token in session storage or cookie
   - _Requirements: None (authentication infrastructure)_
 
-- [ ] 34. Create page structure and routing
+- [x] 34. Create page structure and routing
   - Create customer portal pages: `pages/index.tsx` (landing), `pages/submit-claim.tsx`, `pages/claim-success.tsx`, `pages/my-claims.tsx`
   - Create employee portal pages: `pages/dashboard.tsx`, `pages/claims.tsx`, `pages/claims/[id].tsx`, `pages/analytics.tsx`
   - Create shared layout component with navigation
@@ -333,14 +333,14 @@ The workflow follows a phased approach: backend infrastructure first, then datab
 
 ## Phase 9: Customer Portal — Landing and Claim Form
 
-- [ ] 35. Implement customer portal landing page
+- [x] 35. Implement customer portal landing page
   - Create `pages/index.tsx` with hero section, "Start a Claim" CTA button
   - Add conditional rendering: show "View My Submitted Claims" link only if customer has existing claims
   - Add features section highlighting key benefits
   - Add FAQ section with common questions
   - _Requirements: 1.1_
 
-- [ ] 36. Implement multi-step form wizard component
+- [x] 36. Implement multi-step form wizard component
   - Create `src/components/FormWizard.tsx` component with progress indicator
   - Display "Step X of 4: {Step Name}" at top
   - Implement next/previous button logic
@@ -348,7 +348,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
   - Store form state in context or Zustand store
   - _Requirements: 1.2, 1.3_
 
-- [ ] 37. Implement Step 1: Policy & Vehicle form
+- [x] 37. Implement Step 1: Policy & Vehicle form
   - Create form fields for: Full Name, Policy Number, Mobile Number, Email Address
   - Create vehicle fields: Make, Model, Year, Registration Number
   - Add required field validation with inline error messages
@@ -356,7 +356,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
   - Implement field blur and change event handlers
   - _Requirements: 1.3, 1.4_
 
-- [ ] 38. Implement Step 2: Incident Details form
+- [x] 38. Implement Step 2: Incident Details form
   - Create form fields for: Incident Date, Incident Location, Incident Type (dropdown)
   - Add Incident Type options: Collision, Theft, Fire, Weather Damage, Vandalism, Other
   - Create Incident Description textarea
@@ -364,14 +364,14 @@ The workflow follows a phased approach: backend infrastructure first, then datab
   - Add document upload section for supporting documents
   - _Requirements: 1.5, 2.6_
 
-- [ ] 39. Implement Step 3: Damage Assessment form
+- [x] 39. Implement Step 3: Damage Assessment form
   - Create damaged vehicle areas checklist with predefined list (Front Bumper, Bonnet/Hood, Windshield, Headlights, Doors, Rear Bumper, Roof, Boot/Trunk, Wheels/Tyres, Undercarriage, Airbags Deployed, Engine Bay)
   - Implement severity slider (0-5, labeled Minor to Severe)
   - Add optional damage notes textarea
   - Add vehicle damage photograph upload section
   - _Requirements: 1.6, 1.7, 1.8, 2.1, 2.2, 2.3_
 
-- [ ] 40. Implement Step 4: Review & Submit form
+- [x] 40. Implement Step 4: Review & Submit form
   - Display read-only summary of all entered information grouped by section
   - Show customer info (name, policy number, contact)
   - Show vehicle info (make, model, year, registration)
@@ -381,7 +381,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
   - Implement "Submit Claim for AI Verification" button
   - _Requirements: 1.9, 1.10_
 
-- [ ] 41. Implement form submission and claim creation
+- [x] 41. Implement form submission and claim creation
   - On submit, POST to /api/claims with all form data
   - Upload files first, then create claim with file references
   - Handle validation errors from backend and display user-friendly messages
@@ -389,7 +389,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
   - Redirect to success page on successful submission
   - _Requirements: 1.10, 1.11, 2.11_
 
-- [ ] 42. Implement claim success confirmation page
+- [x] 42. Implement claim success confirmation page
   - Display generated claim ID (VC-YYYY-NNNNN)
   - Display estimated assessment time message
   - Add link to "View Claim Status"
@@ -400,14 +400,14 @@ The workflow follows a phased approach: backend infrastructure first, then datab
 
 ## Phase 10: Customer Portal — Claims Tracking and Status
 
-- [ ] 43. Implement "My Claims" listing page
+- [x] 43. Implement "My Claims" listing page
   - Create query to fetch all claims for current customer
   - Display list with Claim ID, Incident Date, Current Status, Last Updated
   - Apply color-coded status badges (blue: SUBMITTED/PROCESSING/PENDING_REVIEW, amber: INFORMATION_REQUIRED/INVESTIGATION, green: APPROVED, grey: COMPLETED)
   - Implement clickable rows to view claim status details
   - _Requirements: 1.13, 14.1, 14.2_
 
-- [ ] 44. Implement individual claim status page
+- [x] 44. Implement individual claim status page
   - Create `pages/my-claims/[id].tsx` page
   - Display Claim ID and status with explanatory text
   - Display timeline of status changes (submitted date, review start, decision date if available)
@@ -420,7 +420,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
 
 ## Phase 11: File Upload Components and Validation
 
-- [ ] 45. Implement file upload component with drag-and-drop
+- [x] 45. Implement file upload component with drag-and-drop
   - Create `src/components/FileUploadBox.tsx` component with drag-and-drop support
   - Support click-to-browse file picker
   - Validate file format before upload (JPG, JPEG, PNG for images; PDF, JPG, JPEG, PNG for documents)
@@ -432,7 +432,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
   - Display upload progress indicator
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7_
 
-- [ ] 46. Implement document list display with type detection
+- [x] 46. Implement document list display with type detection
   - Create `src/components/DocumentList.tsx` component
   - Display document filename, automatically detected or user-specified type
   - Implement document type selector: Policy, Accident Report, Repair Estimate, Other
@@ -440,7 +440,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
   - Update display when documents are added/removed
   - _Requirements: 2.8, 2.9_
 
-- [ ] 47. Implement image gallery with thumbnails
+- [x] 47. Implement image gallery with thumbnails
   - Create `src/components/ImageGallery.tsx` component
   - Display thumbnail previews of uploaded images
   - Show count of images (e.g., "3 images selected")
@@ -451,7 +451,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
 
 ## Phase 12: Claims Employee Portal — Dashboard and KPIs
 
-- [ ] 48. Implement employee dashboard with KPI cards
+- [x] 48. Implement employee dashboard with KPI cards
   - Create `pages/dashboard.tsx` page
   - Fetch analytics data from GET /api/analytics
   - Display KPI cards in grid layout:
@@ -465,7 +465,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
   - Implement automatic refresh (poll every 30 seconds or use WebSocket)
   - _Requirements: 10.1, 10.2_
 
-- [ ] 49. Implement claims table component with sorting and pagination
+- [x] 49. Implement claims table component with sorting and pagination
   - Create `src/components/ClaimsTable.tsx` component
   - Display columns: Claim ID, Customer Name, Incident Type, Severity, Fraud Risk, Estimated Cost, Priority, Status, Created Date
   - Implement sortable columns (click header to sort)
@@ -474,14 +474,14 @@ The workflow follows a phased approach: backend infrastructure first, then datab
   - Implement clickable rows to open claim details
   - _Requirements: 10.3, 10.4_
 
-- [ ] 50. Implement claims search functionality
+- [x] 50. Implement claims search functionality
   - Create search box component above claims table
   - Implement real-time filtering as user types
   - Search across: Claim ID, Customer Name, Policy Number (case-insensitive)
   - Display "No claims found" message when no results match
   - _Requirements: 11.1, 11.2, 11.3, 11.4_
 
-- [ ] 51. Implement claims filtering with multi-select filters
+- [x] 51. Implement claims filtering with multi-select filters
   - Create filter panel with the following filter options:
     - Status (multi-select): SUBMITTED, PROCESSING, PENDING_REVIEW, INFORMATION_REQUIRED, INVESTIGATION, APPROVED, COMPLETED
     - Fraud Risk (multi-select): LOW, MEDIUM, HIGH
@@ -492,7 +492,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
   - Implement "Clear Filters" button to reset all filters
   - _Requirements: 11.5, 11.6, 11.7, 11.8_
 
-- [ ] 52. Implement dashboard status indicator badges
+- [x] 52. Implement dashboard status indicator badges
   - Create badge components for status, fraud risk, priority, severity
   - Apply color coding:
     - Status: SUBMITTED/PROCESSING/PENDING_REVIEW (blue), INFORMATION_REQUIRED/INVESTIGATION (amber), APPROVED (green), COMPLETED (grey)
@@ -506,7 +506,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
 
 ## Phase 13: Claims Employee Portal — Claim Details View
 
-- [ ] 53. Implement claim details drawer/modal layout
+- [x] 53. Implement claim details drawer/modal layout
   - Create `src/components/ClaimDetailsView.tsx` component
   - Implement drawer that overlays from right side (or full page on mobile)
   - Organize sections vertically:
@@ -526,7 +526,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
   - Keep Human Review Panel accessible while scrolling
   - _Requirements: 12.1, 12.2_
 
-- [ ] 54. Implement claim details header section
+- [x] 54. Implement claim details header section
   - Display Claim ID prominently
   - Show Status badge with color coding
   - Show Priority badge (FAST_TRACK, STANDARD_REVIEW, INVESTIGATION)
@@ -534,42 +534,42 @@ The workflow follows a phased approach: backend infrastructure first, then datab
   - Display Created Date and Last Updated Date
   - _Requirements: 12.1_
 
-- [ ] 55. Implement customer information section
+- [x] 55. Implement customer information section
   - Display: Name, Email, Phone, Policy Number
   - _Requirements: 12.2_
 
-- [ ] 56. Implement vehicle information section
+- [x] 56. Implement vehicle information section
   - Display: Make, Model, Year, Registration Number
   - _Requirements: 12.2_
 
-- [ ] 57. Implement incident information section
+- [x] 57. Implement incident information section
   - Display: Incident Date, Time, Location, Incident Type
   - Display: Full Incident Description text
   - Display: Selected Damaged Areas as tags or list
   - Display: Damage Notes if provided
   - _Requirements: 12.2_
 
-- [ ] 58. Implement uploaded evidence section
+- [x] 58. Implement uploaded evidence section
   - Display: List of uploaded documents with filenames and document types
   - Display: Gallery of vehicle damage image thumbnails
   - Add: Links to download or view files
   - _Requirements: 12.2_
 
-- [ ] 59. Implement AI Claim Summary section
+- [x] 59. Implement AI Claim Summary section
   - Display: AI-generated summary text (200-400 words)
   - Display: Confidence score badge (e.g., "AI Confidence: 87%")
   - Add: Disclaimer text: "AI-generated assessment. Human review required for final decision."
   - Format: Use formatted text, not raw API output
   - _Requirements: 9.3, 9.4, 9.5, 12.2_
 
-- [ ] 60. Implement Damage Assessment section
+- [x] 60. Implement Damage Assessment section
   - Display: Table of damage items with columns: Part, Severity, Estimated Cost
   - Display: Total row with summed estimated repair cost
   - Add: Disclaimer text: "AI-generated estimate. Final repair cost requires human validation by a certified mechanic."
   - If no images analyzed: Display "No vehicle damage images provided"
   - _Requirements: 5.3, 5.5, 5.6, 5.7, 12.4_
 
-- [ ] 61. Implement Policy Assessment section
+- [x] 61. Implement Policy Assessment section
   - Display: Policy Status (Active, Expired, Suspended, Cancelled)
   - Display: Coverage Assessment verdict with color coding:
     - "Likely Covered" (green)
@@ -581,7 +581,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
   - If unknown/missing: Display flag recommending customer contact
   - _Requirements: 6.3, 6.4, 6.5_
 
-- [ ] 62. Implement Fraud Risk Assessment section
+- [x] 62. Implement Fraud Risk Assessment section
   - Display: Fraud Risk Level badge (LOW, MEDIUM, HIGH) with colors
   - Display: Fraud Risk Score (0-100)
   - Display: List of fraud indicators (if any) with:
@@ -594,18 +594,18 @@ The workflow follows a phased approach: backend infrastructure first, then datab
   - Never state: "Customer committed fraud"
   - _Requirements: 7.4, 7.5, 7.6, 7.7, 7.8_
 
-- [ ] 63. Implement Missing Information section
+- [x] 63. Implement Missing Information section
   - If assessment notes missing info: Display list of information gaps identified by AI
   - If no missing info: Display "All required information provided"
   - _Requirements: 12.2_
 
-- [ ] 64. Implement AI Recommendation section
+- [x] 64. Implement AI Recommendation section
   - Display: Recommended action from AI assessment
   - Display: Reasoning for the recommendation
   - Make recommendation prominent (color-coded: green for Approve, yellow for Review, red for Escalate)
   - _Requirements: 12.2_
 
-- [ ] 65. Implement claim timeline section
+- [x] 65. Implement claim timeline section
   - Display: Chronological timeline of claim status changes
   - Show: Submitted date, review start date, decision date (if available)
   - Show: Status at each point in time
@@ -616,7 +616,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
 
 ## Phase 14: Human Review Workflow and Decision Recording
 
-- [ ] 66. Implement Human Review Panel with action buttons
+- [x] 66. Implement Human Review Panel with action buttons
   - Create `src/components/HumanReviewPanel.tsx` component
   - Display three action buttons:
     - "Approve Claim" (green button)
@@ -625,7 +625,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
   - Keep panel visible while scrolling (sticky positioning)
   - _Requirements: 13.1_
 
-- [ ] 67. Implement "Approve Claim" action and confirmation
+- [x] 67. Implement "Approve Claim" action and confirmation
   - On button click: Show modal/dialog with:
     - Optional review comments textarea
     - "Approve this claim? This action cannot be undone." confirmation message
@@ -638,7 +638,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
     - Update dashboard to remove from "Pending Review" count
   - _Requirements: 13.2, 13.5, 13.7_
 
-- [ ] 68. Implement "Request More Information" action and confirmation
+- [x] 68. Implement "Request More Information" action and confirmation
   - On button click: Show modal/dialog with:
     - Required textarea asking "What information is needed from customer?"
     - "Request more information from customer? They will receive a notification." message
@@ -650,7 +650,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
     - Display success toast notification
   - _Requirements: 13.3_
 
-- [ ] 69. Implement "Escalate for Investigation" action and confirmation
+- [x] 69. Implement "Escalate for Investigation" action and confirmation
   - On button click: Show modal/dialog with:
     - Required textarea asking for investigation notes
     - "Escalate this claim for investigation?" message
@@ -662,7 +662,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
     - Route claim to investigation team (flag for manual routing)
   - _Requirements: 13.4, 13.5_
 
-- [ ] 70. Implement read-only mode for decided claims
+- [x] 70. Implement read-only mode for decided claims
   - After decision recorded: Hide Human Review Panel or show read-only state
   - Display "Claim Already Decided: [Decision Type]" message
   - Show reviewer name, decision timestamp, and decision comments
@@ -673,7 +673,7 @@ The workflow follows a phased approach: backend infrastructure first, then datab
 
 ## Phase 15: Analytics Dashboard
 
-- [ ] 71. Implement analytics page with KPI cards and charts
+- [x] 71. Implement analytics page with KPI cards and charts
   - Create `pages/analytics.tsx` page
   - Display KPI cards at top (Total Claims, Pending, High Risk, Fast Track, Processed This Week, Avg Processing Time)
   - Implement time-series chart showing claims submitted over time (by day)

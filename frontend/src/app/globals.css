@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+/*
+ * Palette carried over from the VeriClaim marketing page so the product and
+ * the app read as one thing.
+ *
+ * Status, severity and fraud colours are defined once here and referenced by
+ * the badge components; a status must never be styled ad hoc at a call site,
+ * or the same state ends up a different colour on two screens.
+ */
+@theme {
+  --color-ink: #0d141c;
+  --color-ink-2: #141f2b;
+  --color-ink-3: #1b2836;
+  --color-paper: #f1f4f7;
+  --color-card: #ffffff;
+  --color-line: #e3e8ed;
+  --color-line-dark: rgba(255, 255, 255, 0.09);
+
+  --color-text-hi: #101923;
+  --color-text-lo: #5c6b78;
+  --color-text-hi-dark: #f4f7fa;
+  --color-text-lo-dark: #8ca0b3;
+
+  --color-brand: #1fbeb4;
+  --color-brand-dim: rgba(31, 190, 180, 0.12);
+  --color-amber: #de8c1f;
+  --color-amber-dim: rgba(222, 140, 31, 0.13);
+  --color-green: #1e9e6b;
+  --color-green-dim: rgba(30, 158, 107, 0.12);
+  --color-red: #d14a42;
+  --color-red-dim: rgba(209, 74, 66, 0.12);
+  --color-blue: #3660d8;
+  --color-blue-dim: rgba(54, 96, 216, 0.1);
+
+  /* Supplied by next/font in layout.tsx, which self-hosts and preloads them. */
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --radius-card: 14px;
+  --radius-chip: 9px;
+
+  --shadow-card: 0 1px 2px rgba(16, 25, 35, 0.04),
+    0 8px 24px -12px rgba(16, 25, 35, 0.12);
+}
+
+html,
+body {
+  background: var(--color-paper);
+  color: var(--color-text-hi);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Visible focus for keyboard users; claims work is form-heavy and often
+   navigated entirely by tab. */
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Respect a user's reduced-motion setting rather than animating regardless. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
