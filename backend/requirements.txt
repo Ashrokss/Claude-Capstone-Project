@@ -1,0 +1,39 @@
+# VeriClaim AI MVP Backend Requirements
+# Install with: pip install -r requirements.txt
+
+# Core FastAPI and Web Server
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# Database
+sqlalchemy==2.0.23
+asyncpg==0.29.0          # async driver used by the FastAPI request path
+psycopg2-binary==2.9.9   # sync driver used by Alembic and utility scripts
+alembic==1.13.0
+supabase==2.3.5
+
+# Data Validation and Settings
+pydantic==2.5.0
+pydantic-settings==2.1.0
+email-validator==2.1.0   # required by pydantic's EmailStr
+python-multipart==0.0.6
+
+# Environment Configuration
+python-dotenv==1.0.0
+
+# HTTP Client for AI APIs
+httpx==0.25.2
+requests==2.31.0
+
+# Authentication and Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# Optional Development Dependencies
+# Uncomment below to install dev tools
+# pytest==7.4.3
+# pytest-asyncio==0.21.1
+# pytest-cov==4.1.0
+# black==23.11.0
+# ruff==0.1.8
+# mypy==1.7.0
