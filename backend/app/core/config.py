@@ -82,7 +82,13 @@ class Settings(BaseSettings):
     # 30s ceiling times out on healthy calls.
     ai_request_timeout_seconds: int = 90
     ai_max_retries: int = 3
-    ai_job_timeout_seconds: int = 300
+    # A full run makes six or more provider calls, and one NVIDIA call that
+    # stalls burns its whole 90s timeout before being retried. An observed run
+    # with a policy document to read took 304s, which the previous 300s ceiling
+    # would have killed a few seconds from completion. Analysis is asynchronous
+    # and polled, so a generous ceiling costs nothing; hitting it means the run
+    # is genuinely stuck.
+    ai_job_timeout_seconds: int = 900
 
     model_config = SettingsConfigDict(
         env_file=".env",

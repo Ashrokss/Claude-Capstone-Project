@@ -31,6 +31,15 @@ DAMAGE_PROMPT = (
     "a low damage_confidence."
 )
 
+DOCUMENT_PROMPT = (
+    "You are transcribing an insurance document from an image. Return ONLY a JSON "
+    "object with keys: document_text (the text you can read, preserving line "
+    "breaks), legible (true or false). Transcribe only what is actually visible. "
+    "Do not infer, complete, or correct field values: a misread policy number is "
+    "worse than an omitted one. If the image is too blurred or cropped to read, "
+    "set legible to false and document_text to an empty string."
+)
+
 
 class GeminiClient:
     """Vision analysis over the Gemini API."""
@@ -69,6 +78,46 @@ class GeminiClient:
         Raises:
             AIError: If the call fails or the reply cannot be parsed.
         """
+        return await self._vision(DAMAGE_PROMPT, image_bytes, mime_type)
+
+    async def read_document_image(
+        self, image_bytes: bytes, mime_type: str = "image/jpeg"
+    ) -> dict[str, Any]:
+        """
+        Transcribe a photographed or scanned document.
+
+        Used for image uploads and for PDFs that carry no text layer, which is
+        what a scanned policy looks like.
+
+        Args:
+            image_bytes: Raw image content.
+            mime_type: The image's MIME type.
+
+        Returns:
+            Keys: document_text, legible.
+
+        Raises:
+            AIError: If the call fails or the reply cannot be parsed.
+        """
+        return await self._vision(DOCUMENT_PROMPT, image_bytes, mime_type)
+
+    async def _vision(
+        self, prompt: str, image_bytes: bytes, mime_type: str
+    ) -> dict[str, Any]:
+        """
+        Send one image plus a prompt and parse the JSON reply.
+
+        Args:
+            prompt: Instruction describing the required JSON shape.
+            image_bytes: Raw image content.
+            mime_type: The image's MIME type.
+
+        Returns:
+            The parsed JSON object.
+
+        Raises:
+            AIError: If the call fails or the reply cannot be parsed.
+        """
         if not self.api_key:
             raise AIError(
                 "GEMINI_API_KEY is not configured", provider=PROVIDER, recoverable=False
@@ -80,7 +129,7 @@ class GeminiClient:
             "contents": [
                 {
                     "parts": [
-                        {"text": DAMAGE_PROMPT},
+                        {"text": prompt},
                         {
                             "inline_data": {
                                 "mime_type": mime_type,

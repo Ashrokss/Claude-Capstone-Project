@@ -28,7 +28,7 @@ from app.schemas.enums import (
     PolicyStatus,
     RecommendedAction,
 )
-from app.services import claim_service, storage_service
+from app.services import claim_service, document_text, storage_service
 from app.services.ai.base import AIError, clamp_percent, coerce_decimal, pick_enum
 from app.services.ai.gemini_client import GeminiClient
 from app.services.ai.nvidia_client import NVIDIAClient
@@ -244,12 +244,34 @@ class AIOrchestrator:
                 document.extraction_error = "File could not be retrieved from storage"
                 continue
 
-            # PDFs are not text-extracted here; that needs a parser and is out
-            # of scope for the MVP. Images of documents go to the vision model.
-            text = _decode_text(content)
-            if not text:
+            extracted = document_text.extract(content)
+            text = extracted.text
+
+            # A scan or a photograph has no text layer, so the vision model is
+            # the only way to read it.
+            if text is None and extracted.needs_vision:
+                transcription = await self._step(
+                    f"read_document_image:{document.id}",
+                    failures,
+                    self.gemini.read_document_image,
+                    content,
+                    document.mime_type or "image/jpeg",
+                )
+                if transcription and transcription.get("legible"):
+                    text = (transcription.get("document_text") or "").strip() or None
+                if text is None:
+                    document.extraction_status = "FAILED"
+                    document.extraction_error = (
+                        "This document could not be read. A clearer photograph, or a "
+                        "PDF with selectable text, would help."
+                    )
+                    continue
+
+            if text is None:
                 document.extraction_status = "FAILED"
-                document.extraction_error = "No extractable text in this document"
+                document.extraction_error = (
+                    extracted.reason or "No readable text in this document"
+                )
                 continue
 
             result = await self._step(
@@ -446,17 +468,6 @@ def _build_indicators(assessment_id: UUID, raw: Any) -> list[FraudIndicator]:
             )
         )
     return indicators
-
-
-def _decode_text(content: bytes) -> Optional[str]:
-    """Decode document bytes as text, if they are text at all."""
-    if content[:5] == b"%PDF-":
-        return None
-    try:
-        text = content.decode("utf-8", errors="ignore").strip()
-    except Exception:
-        return None
-    return text or None
 
 
 def _truncate(value: Any, length: int) -> Optional[str]:

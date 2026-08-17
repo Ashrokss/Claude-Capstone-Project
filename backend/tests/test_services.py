@@ -407,15 +407,17 @@ class TestOrchestratorRobustness:
         # Used when the summary step fails; the claim still needs a recommendation.
         assert _fallback_action(priority) == expected
 
-    def test_pdf_bytes_are_not_treated_as_text(self):
-        from app.services.ai.orchestrator import _decode_text
+    def test_document_reading_is_delegated_not_hand_rolled(self):
+        # The orchestrator used to decode every non-PDF as UTF-8 with
+        # errors="ignore", which fed mojibake to the model. Reading now goes
+        # through app.services.document_text, which is covered by
+        # tests/test_document_text.py.
+        import pathlib
 
-        assert _decode_text(b"%PDF-1.7 binary junk") is None
-
-    def test_plain_text_document_decodes(self):
-        from app.services.ai.orchestrator import _decode_text
-
-        assert "POL-123" in _decode_text(b"Policy Number: POL-123")
+        source = pathlib.Path("app/services/ai/orchestrator.py").read_text(encoding="utf-8")
+        assert "_decode_text" not in source
+        assert "document_text.extract(" in source
+        assert 'errors="ignore"' not in source
 
     def test_truncate_handles_none_and_blanks(self):
         from app.services.ai.orchestrator import _truncate
