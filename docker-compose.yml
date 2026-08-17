@@ -1,0 +1,81 @@
+# VeriClaim AI — local stack.
+#
+# There is no database service: the app uses hosted Supabase, so both
+# containers reach out to it over the internet. Configure it in backend/.env
+# and .env before starting.
+#
+#   docker compose up --build
+#
+# Then open http://localhost:3000
+#
+# One thing worth understanding about NEXT_PUBLIC_API_URL: the requests to the
+# backend are made by JavaScript running in your browser, not by the frontend
+# container. The browser cannot resolve the compose service name `backend`, so
+# this must be a URL reachable from the host — http://localhost:8000 — and not
+# http://backend:8000.
+
+services:
+  backend:
+    build:
+      context: ./backend
+    image: vericlaim-backend:local
+    container_name: vericlaim-backend
+    # Supplies Supabase credentials, AI keys, and model names. Compose fails
+    # loudly if this file is missing, which is better than a container that
+    # starts and then rejects every request.
+    env_file:
+      - ./backend/.env
+    environment:
+      # Overrides whatever the .env says, so the container is not told to bind
+      # to a host or port that does not match the mapping below.
+      HOST: 0.0.0.0
+      PORT: "8000"
+      RELOAD: "false"
+      # The browser origin, for CORS. The frontend container's own hostname is
+      # irrelevant here for the same reason as NEXT_PUBLIC_API_URL above.
+      FRONTEND_URL: ${FRONTEND_ORIGIN:-http://localhost:3000}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Inlined into the client bundle at build time. Changing any of these
+        # requires a rebuild, not just a restart.
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?set NEXT_PUBLIC_SUPABASE_URL in .env}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set NEXT_PUBLIC_SUPABASE_ANON_KEY in .env}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    image: vericlaim-frontend:local
+    container_name: vericlaim-frontend
+    environment:
+      # Read by proxy.ts during server-side session checks, which do run inside
+      # the container.
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # One-shot migration runner. Not part of `up`; invoke it explicitly:
+  #   docker compose run --rm migrate
+  migrate:
+    build:
+      context: ./backend
+    image: vericlaim-backend:local
+    env_file:
+      - ./backend/.env
+    command: ["alembic", "-c", "migrations/alembic.ini", "upgrade", "head"]
+    profiles: ["tools"]
+    restart: "no"

@@ -1,0 +1,22 @@
+# Secrets never enter the image; NEXT_PUBLIC_* values arrive as build args.
+.env
+.env.*
+!.env.example
+
+node_modules/
+.next/
+out/
+build/
+dist/
+.turbo/
+*.tsbuildinfo
+.eslintcache
+
+npm-debug.log*
+yarn-error.log*
+
+.git/
+.gitignore
+Dockerfile
+.dockerignore
+README.md
