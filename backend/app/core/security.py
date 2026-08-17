@@ -10,9 +10,11 @@ replacement for the checks here.
 """
 
 import logging
-from typing import Annotated, Iterable, Optional
+import time
+from typing import Annotated, Any, Iterable, Optional
 from uuid import UUID
 
+import httpx
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
@@ -27,7 +29,75 @@ logger = logging.getLogger(__name__)
 # project's error envelope rather than FastAPI's default body.
 bearer_scheme = HTTPBearer(auto_error=False, description="Supabase access token")
 
-ALGORITHM = "HS256"
+# Asymmetric algorithms verified against the project's published JWKS.
+ASYMMETRIC_ALGORITHMS = frozenset({"ES256", "ES384", "ES512", "RS256", "RS384", "RS512"})
+# Symmetric algorithm verified against the legacy shared JWT secret.
+SYMMETRIC_ALGORITHMS = frozenset({"HS256", "HS384", "HS512"})
+
+# JWKS is cached because it is fetched on the hot path of every request, and
+# refetched when a token presents an unseen kid, which is how key rotation
+# surfaces.
+_JWKS_TTL_SECONDS = 600
+_jwks_cache: dict[str, Any] = {"keys": [], "fetched_at": 0.0}
+
+
+def _jwks_url() -> str:
+    """Return the project's JWKS discovery URL."""
+    return f"{settings.supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
+
+
+async def _fetch_jwks(force: bool = False) -> list[dict]:
+    """
+    Return the project's signing keys, from cache when fresh.
+
+    Args:
+        force: Refetch even if the cache is still within its TTL. Used when a
+            token presents a kid that is not in the cached set.
+
+    Returns:
+        The JWK list, empty if the endpoint could not be read.
+    """
+    fresh = time.monotonic() - _jwks_cache["fetched_at"] < _JWKS_TTL_SECONDS
+    if _jwks_cache["keys"] and fresh and not force:
+        return _jwks_cache["keys"]
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.get(
+                _jwks_url(), headers={"apikey": settings.supabase_key}
+            )
+        if response.status_code >= 400:
+            logger.error("JWKS fetch failed (%s)", response.status_code)
+            return _jwks_cache["keys"]
+
+        keys = response.json().get("keys") or []
+        _jwks_cache["keys"] = keys
+        _jwks_cache["fetched_at"] = time.monotonic()
+        logger.info("Loaded %d signing key(s) from JWKS", len(keys))
+        return keys
+    except (httpx.HTTPError, ValueError):
+        logger.exception("Could not fetch JWKS")
+        # Serving from a stale cache beats rejecting every request outright.
+        return _jwks_cache["keys"]
+
+
+async def _signing_key(kid: Optional[str]) -> Optional[dict]:
+    """
+    Find the JWK matching a token's key id.
+
+    Args:
+        kid: The `kid` header from the token.
+
+    Returns:
+        The matching JWK, or None if no key matches.
+    """
+    keys = await _fetch_jwks()
+    match = next((k for k in keys if k.get("kid") == kid), None)
+    if match is None:
+        # An unknown kid usually means the project rotated its keys.
+        keys = await _fetch_jwks(force=True)
+        match = next((k for k in keys if k.get("kid") == kid), None)
+    return match
 
 
 class CurrentUser(BaseModel):
@@ -52,9 +122,22 @@ def _unauthorised(detail: str) -> HTTPException:
     )
 
 
-def decode_supabase_jwt(token: str) -> dict:
+async def decode_supabase_jwt(token: str) -> dict:
     """
     Verify a Supabase access token and return its claims.
+
+    Supabase projects sign tokens one of two ways, and which one is in use is a
+    property of the project, not a choice made here:
+
+    * Newer projects use asymmetric keys (typically ES256) and publish the
+      public half at the JWKS endpoint.
+    * Older projects use a shared HS256 secret.
+
+    The token's own `alg` header selects the path, but each path is pinned to
+    one kind of key material. That matters: the JWKS public key is public, so
+    if an HS256 token were ever verified against it, anyone could forge a token
+    by signing with that public value. HS256 is therefore only ever checked
+    against the private shared secret.
 
     Args:
         token: The raw JWT from the Authorization header.
@@ -63,23 +146,53 @@ def decode_supabase_jwt(token: str) -> dict:
         The decoded claim set.
 
     Raises:
-        HTTPException: 500 if no signing secret is configured, 401 if the token
-            is expired, malformed, or fails signature or audience checks.
+        HTTPException: 401 if the token is malformed, expired, or fails
+            signature or audience checks; 500 if the server has no way to
+            verify the algorithm the token claims.
     """
-    if not settings.supabase_jwt_secret:
-        # Fail closed. Accepting unverified tokens would make every role check
-        # below decorative.
-        logger.error("SUPABASE_JWT_SECRET is not configured; rejecting request")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Authentication is not configured on the server",
-        )
+    try:
+        header = jwt.get_unverified_header(token)
+    except JWTError as exc:
+        logger.warning("Rejected malformed access token: %s", exc)
+        raise _unauthorised("Invalid or expired access token") from exc
+
+    algorithm = header.get("alg")
+
+    if algorithm in SYMMETRIC_ALGORITHMS:
+        if not settings.supabase_jwt_secret:
+            # Fail closed: without the secret there is nothing to check against,
+            # and accepting the token would make every role check decorative.
+            logger.error(
+                "Token uses %s but SUPABASE_JWT_SECRET is not set; rejecting", algorithm
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Authentication is not configured on the server",
+            )
+        key: Any = settings.supabase_jwt_secret
+        allowed = [algorithm]
+
+    elif algorithm in ASYMMETRIC_ALGORITHMS:
+        jwk_key = await _signing_key(header.get("kid"))
+        if jwk_key is None:
+            logger.warning(
+                "No JWKS key matches kid=%s; rejecting token", header.get("kid")
+            )
+            raise _unauthorised("Invalid or expired access token")
+        key = jwk_key
+        # Pinned to the key's own algorithm so a token cannot nominate a weaker
+        # one than the key was published for.
+        allowed = [jwk_key.get("alg") or algorithm]
+
+    else:
+        logger.warning("Rejected token with unsupported alg=%r", algorithm)
+        raise _unauthorised("Invalid or expired access token")
 
     try:
         return jwt.decode(
             token,
-            settings.supabase_jwt_secret,
-            algorithms=[ALGORITHM],
+            key,
+            algorithms=allowed,
             audience=settings.supabase_jwt_audience,
         )
     except JWTError as exc:
@@ -141,7 +254,7 @@ async def get_current_user(
     if credentials is None or not credentials.credentials:
         raise _unauthorised("Not authenticated")
 
-    claims = decode_supabase_jwt(credentials.credentials)
+    claims = await decode_supabase_jwt(credentials.credentials)
 
     subject = claims.get("sub")
     if not subject:

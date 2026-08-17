@@ -95,6 +95,17 @@ export function ReviewPanel({
       setComments("");
       onDecided();
     } catch (err) {
+      // A 409 means the claim was already decided — by a colleague, or by this
+      // reviewer before the page lost contact with the server. The claim is not
+      // in a bad state; this view is simply out of date. Refreshing replaces
+      // these buttons with the decision that was actually recorded, which is
+      // more useful than an error telling the reviewer to try again.
+      if (err instanceof ApiError && err.status === 409) {
+        setSelected(null);
+        setDetail("");
+        onDecided();
+        return;
+      }
       setError(err instanceof Error ? err : new Error("Could not record the decision"));
     } finally {
       setBusy(false);

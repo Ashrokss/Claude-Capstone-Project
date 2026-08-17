@@ -73,15 +73,27 @@ async function request<T>(
     headers["Content-Type"] = "application/json";
   }
 
-  const response = await fetch(`${BASE_URL}${path}`, { ...init, headers });
+  let response: Response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`, { ...init, headers });
+  } catch {
+    // fetch() rejects with a bare TypeError ("Failed to fetch") for anything
+    // that never reached the server: the API being down, a restart mid-request,
+    // a blocked CORS preflight, no network. That message means nothing to a
+    // user, so it is replaced with one that says what to do.
+    throw new ApiError(0, {
+      error: "NETWORK",
+      message: `Could not reach the claims service at ${BASE_URL}. It may be restarting — check your connection and try again.`,
+    });
+  }
 
   if (response.status === 204) {
     return undefined as T;
   }
 
   const payload = await response.json().catch(() => ({
-    error: "NETWORK",
-    message: "The server returned an unreadable response.",
+    error: "UNREADABLE_RESPONSE",
+    message: "The server returned a response we could not read.",
   }));
 
   if (!response.ok) {

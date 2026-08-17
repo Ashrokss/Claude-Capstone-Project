@@ -33,10 +33,22 @@
   --color-blue: #3660d8;
   --color-blue-dim: rgba(54, 96, 216, 0.1);
 
-  /* Supplied by next/font in layout.tsx, which self-hosts and preloads them. */
-  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  /*
+   * Supplied by next/font in layout.tsx, which self-hosts and preloads them.
+   *
+   * next/font exposes each family through a class, and that class is applied to
+   * <html> rather than <body> precisely so these :root declarations can resolve
+   * it: a custom property is computed on the element where it is declared, so
+   * --font-inter has to exist on the same element as --font-sans.
+   *
+   * Each var() also carries its own fallback. Without one, an undefined
+   * --font-inter makes the whole font-family declaration invalid rather than
+   * falling through to the generic families listed after it, and the browser
+   * drops to its default serif.
+   */
+  --font-display: var(--font-space-grotesk, ui-sans-serif), system-ui, sans-serif;
+  --font-sans: var(--font-inter, ui-sans-serif), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono, ui-monospace), monospace;
 
   --radius-card: 14px;
   --radius-chip: 9px;

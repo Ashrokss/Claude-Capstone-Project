@@ -44,21 +44,39 @@ export default function AdjusterClaimPage({
       const next = await api.getClaim(id);
       setClaim(next);
       setError(null);
-      return next;
+      return { claim: next, retryable: false };
     } catch (err) {
       setError(err instanceof Error ? err : new Error("Could not load this claim"));
-      return null;
+      // A network failure or a 5xx will likely succeed on a later attempt; a
+      // 401/403/404 will not, so polling should give up on those.
+      const retryable =
+        err instanceof ApiError && (err.status === 0 || err.status >= 500);
+      return { claim: null, retryable };
     }
   }, [id]);
 
   useEffect(() => {
     let active = true;
+    let failures = 0;
 
     async function tick() {
-      const next = await load();
+      const { claim: next, retryable } = await load();
       if (!active) return;
-      if (next && LIVE_STATUSES.has(next.status)) {
-        timer.current = setTimeout(tick, 4000);
+
+      if (next) {
+        failures = 0;
+        if (LIVE_STATUSES.has(next.status)) {
+          timer.current = setTimeout(tick, 4000);
+        }
+        return;
+      }
+
+      // Keep trying through a restart or a blip, backing off so a genuinely
+      // down service is not hammered. Without this a single failed poll left
+      // the page stuck on an error until it was reloaded by hand.
+      if (retryable && failures < 6) {
+        failures += 1;
+        timer.current = setTimeout(tick, Math.min(2000 * 2 ** failures, 30000));
       }
     }
 

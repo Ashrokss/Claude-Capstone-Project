@@ -37,22 +37,37 @@ export default function CustomerClaimPage({
       const next = await api.getClaim(id);
       setClaim(next);
       setError(null);
-      return next;
+      return { claim: next, retryable: false };
     } catch (err) {
       setError(err instanceof Error ? err : new Error("Could not load this claim"));
-      return null;
+      const retryable =
+        err instanceof ApiError && (err.status === 0 || err.status >= 500);
+      return { claim: null, retryable };
     }
   }, [id]);
 
   useEffect(() => {
     let active = true;
+    let failures = 0;
 
     async function tick() {
-      const next = await load();
+      const { claim: next, retryable } = await load();
       if (!active) return;
-      // Poll only while something is actually expected to change.
-      if (next && LIVE_STATUSES.has(next.status)) {
-        timer.current = setTimeout(tick, 5000);
+
+      if (next) {
+        failures = 0;
+        // Poll only while something is actually expected to change.
+        if (LIVE_STATUSES.has(next.status)) {
+          timer.current = setTimeout(tick, 5000);
+        }
+        return;
+      }
+
+      // Recover by itself from a restart or a blip, rather than stranding the
+      // claimant on an error until they reload.
+      if (retryable && failures < 6) {
+        failures += 1;
+        timer.current = setTimeout(tick, Math.min(2000 * 2 ** failures, 30000));
       }
     }
 
