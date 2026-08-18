@@ -136,19 +136,6 @@ admits both. The role exists as the seam for admin-only features (user
 management, configuration, audit access) rather than as a live privilege level
 today. Use `require_roles(UserRole.ADMIN)` when adding one.
 
-## Test accounts
-
-Created with confirmed email addresses, so no inbox is needed:
-
-| Email | Password | Role |
-| --- | --- | --- |
-| `customer@vericlaim.test` | `TestPass123!` | customer |
-| `adjuster@vericlaim.test` | `TestPass123!` | claims_employee |
-| `admin@vericlaim.test` | `TestPass123!` | admin |
-
-These exist only in the development project. Delete them before this is ever
-pointed at anything real.
-
 ## Project layout
 
 ```
