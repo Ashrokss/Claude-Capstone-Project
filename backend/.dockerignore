@@ -1,0 +1,27 @@
+# Secrets never enter the image; compose supplies them at runtime via env_file.
+.env
+.env.*
+!.env.example
+
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+logs/
+*.log
+
+.git/
+.gitignore
+Dockerfile
+.dockerignore
+
+# Documentation is not needed to run the service.
+*.md
+tests/

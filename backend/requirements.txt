@@ -1,0 +1,44 @@
+# VeriClaim AI MVP Backend Requirements
+# Install with: pip install -r requirements.txt
+#
+# These are the versions the test suite is verified against. They were
+# previously pinned lower than the installed environment, so the Docker image
+# built a different dependency set from the one the tests ran on — pydantic
+# 2.5 rejects the `max_digits` constraint used in the assessment schemas, so
+# the container failed to import while the local suite passed.
+
+# Core FastAPI and Web Server
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+
+# Database
+sqlalchemy==2.0.31
+asyncpg==0.31.0          # async driver used by the FastAPI request path
+psycopg2-binary==2.9.12  # sync driver used by Alembic and utility scripts
+alembic==1.19.1
+supabase==2.31.0
+
+# Data Validation and Settings
+pydantic==2.13.4
+pydantic-settings==2.12.0
+email-validator==2.2.0   # required by pydantic's EmailStr
+python-multipart==0.0.9
+
+# Environment Configuration
+python-dotenv==1.0.1
+
+# Document text extraction
+pypdf==6.16.1
+
+# HTTP Client for AI APIs
+httpx==0.27.0
+requests==2.32.5
+
+# Authentication and Security
+python-jose[cryptography]==3.5.0
+passlib[bcrypt]==1.7.4
+
+# Optional Development Dependencies
+# Install with: pip install -r requirements.txt pytest pytest-asyncio
+# pytest==9.1.1
+# pytest-asyncio==1.4.0

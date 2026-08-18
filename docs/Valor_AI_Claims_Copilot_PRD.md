@@ -1047,7 +1047,11 @@ GEMINI_API_KEY=
 GEMINI_MODEL=
 
 DEMO_MODE=false
-DATABASE_URL=sqlite:///./valor.db
+
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+DATABASE_URL=postgresql+psycopg://postgres:<password>@<project-ref>.supabase.co:5432/postgres
 ```
 
 Do not hardcode:
@@ -1055,6 +1059,11 @@ Do not hardcode:
 - API keys
 - Model names
 - API URLs
+- Database credentials
+
+`SUPABASE_SERVICE_ROLE_KEY` and `DATABASE_URL` are backend-only secrets and
+must never be exposed to the frontend. Only `SUPABASE_URL` and
+`SUPABASE_ANON_KEY` may ever reach the browser.
 
 The selected NVIDIA model should be configurable through environment variables.
 
@@ -1197,9 +1206,34 @@ A human makes the final decision.
 
 # 31. Database
 
-Use SQLite for the MVP.
+Use Supabase (hosted PostgreSQL) for the MVP.
 
-Use SQLAlchemy for database access.
+Use SQLAlchemy for database access, connecting to Supabase over the standard
+PostgreSQL connection string in `DATABASE_URL`.
+
+Connection rules:
+
+- Use the Supabase connection pooler for the application connection.
+- Keep the direct (non-pooled) connection for migrations only.
+- The backend owns all database access. The frontend never queries Supabase
+  directly; it talks only to the FastAPI API.
+
+Schema rules:
+
+- Primary keys are `uuid` with a server-side default.
+- Foreign keys are `uuid` and declare `on delete cascade` from `claims`.
+- Timestamps are `timestamptz` and default to `now()`.
+- Money values are `numeric(12,2)`, not floats.
+- Manage schema changes with migrations, not hand edits in the Supabase
+  dashboard, so the schema stays reproducible.
+
+Row Level Security:
+
+- Enable RLS on every table.
+- The backend connects with the service role and therefore bypasses RLS.
+- RLS is the backstop that keeps the customer portal and the adjuster console
+  separated if a key is ever misused. It is not the primary authorization
+  boundary; the API is.
 
 ## claims
 
@@ -1302,6 +1336,7 @@ Use:
 - Python
 - FastAPI
 - SQLAlchemy
+- psycopg (PostgreSQL driver)
 - Pydantic
 
 API endpoints:
@@ -1591,6 +1626,8 @@ Implement:
 - `.env.example`.
 - `.gitignore`.
 - API key protection.
+- Supabase service role key and `DATABASE_URL` kept backend-only.
+- Row Level Security enabled on all tables.
 - File type validation.
 - File size validation.
 - Input validation.
@@ -1776,7 +1813,7 @@ Backend:
 FastAPI + Python
 
 Database:
-SQLite + SQLAlchemy
+Supabase (PostgreSQL) + SQLAlchemy
 
 AI:
 NVIDIA API

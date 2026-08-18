@@ -1,0 +1,101 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vericlaim-ai-mvp"
+version = "0.1.0"
+description = "VeriClaim AI MVP - AI-powered insurance claims processing system"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "VeriClaim Team", email = "team@vericlaim.ai"}
+]
+keywords = ["fastapi", "insurance", "claims", "ai", "nvidia", "gemini"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.30.0",
+    "sqlalchemy>=2.0.31",
+    "asyncpg>=0.29.0",
+    "psycopg2-binary>=2.9.9",
+    # 2.5 rejects the max_digits/decimal_places constraints the assessment
+    # schemas apply to Optional[Decimal] fields.
+    "pydantic>=2.7.0",
+    "pydantic-settings>=2.1.0",
+    "email-validator>=2.1.0",
+    "python-dotenv>=1.0.0",
+    "httpx>=0.25.0",
+    "pypdf>=5.0.0",
+    "supabase>=2.3.0",
+    "python-multipart>=0.0.6",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "alembic>=1.13.0",
+    "requests>=2.31.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.3",
+    "pytest-asyncio>=0.21.1",
+    "pytest-cov>=4.1.0",
+    "black>=23.11.0",
+    "ruff>=0.1.8",
+    "mypy>=1.7.0",
+    "types-requests",
+    "types-python-jose",
+]
+
+[tool.setuptools]
+packages = ["app"]
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+  | migrations
+)/
+'''
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C",   # flake8-comprehensions
+    "B",   # flake8-bugbear
+]
+ignore = [
+    "E501",  # line too long (handled by black)
+    "B008",  # do not perform function calls in argument defaults
+]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
