@@ -7,6 +7,15 @@ import { Button, Card, ErrorPanel, Field, inputClass } from "@/components/ui";
 
 type Mode = "sign-in" | "sign-up";
 
+// Registration is open by default, which is right for local development. A
+// public deployment sets this to "false": every claim spends real NVIDIA and
+// Gemini quota, so anyone who can register can spend it.
+//
+// This hides the control; it is not the boundary. Supabase's own API is still
+// reachable from anywhere with the publishable key, so signups must also be
+// turned off in Supabase → Authentication → Sign In / Providers.
+const SIGNUP_ENABLED = process.env.NEXT_PUBLIC_ALLOW_SIGNUP !== "false";
+
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
@@ -29,6 +38,11 @@ function LoginForm() {
 
     try {
       if (mode === "sign-up") {
+        if (!SIGNUP_ENABLED) {
+          throw new Error(
+            "Registration is closed on this deployment. Ask an administrator for an account."
+          );
+        }
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -129,6 +143,7 @@ function LoginForm() {
         </form>
       </Card>
 
+      {SIGNUP_ENABLED ? (
       <p className="text-center text-sm text-[#5c6b78]">
         {mode === "sign-in" ? "No account yet?" : "Already registered?"}{" "}
         <button
@@ -142,11 +157,18 @@ function LoginForm() {
           {mode === "sign-in" ? "Create one" : "Sign in"}
         </button>
       </p>
+      ) : null}
 
       <p className="rounded-[14px] bg-[#eef1f5] px-4 py-3 text-xs leading-relaxed text-[#5c6b78]">
-        New accounts are customers by default. Adjuster access is granted by an
-        administrator setting <code className="font-[family-name:var(--font-mono)]">app_metadata.role</code> to{" "}
-        <code className="font-[family-name:var(--font-mono)]">claims_employee</code> in Supabase.
+        {SIGNUP_ENABLED ? (
+          <>
+            New accounts are customers by default. Adjuster access is granted by an
+            administrator setting <code className="font-[family-name:var(--font-mono)]">app_metadata.role</code> to{" "}
+            <code className="font-[family-name:var(--font-mono)]">claims_employee</code> in Supabase.
+          </>
+        ) : (
+          <>Accounts on this demo are issued by an administrator.</>
+        )}
       </p>
     </div>
   );

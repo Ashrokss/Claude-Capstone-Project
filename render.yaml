@@ -1,0 +1,106 @@
+# Render blueprint for the VeriClaim backend.
+#
+# The backend is deployed as a container rather than as functions because
+# analysis is not request-shaped: job_queue.py runs a worker pool that lives
+# for the life of the process, and a single claim takes one to five minutes
+# across several provider calls. Both facts rule out serverless.
+#
+# There is no database service here. The app uses hosted Supabase, so this
+# container reaches out to it over the internet.
+#
+# Deploy: Render dashboard → New → Blueprint → point at this repository.
+
+services:
+  - type: web
+    name: vericlaim-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    region: singapore
+    plan: free
+    healthCheckPath: /health
+
+    envVars:
+      # --- Server ----------------------------------------------------------
+      # The Dockerfile pins uvicorn to 0.0.0.0:8000 in its CMD, and EXPOSE 8000
+      # tells Render where to route. These two mirror that for anything that
+      # reads settings directly; changing them alone will not move the port.
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: "8000"
+      - key: RELOAD
+        value: "false"
+
+      # --- Safety ----------------------------------------------------------
+      # SQL_ECHO tied to debug once wrote claimant names, emails and phone
+      # numbers into the log file. Both stay off in a deployed environment.
+      - key: DEBUG
+        value: "false"
+      - key: SQL_ECHO
+        value: "false"
+      - key: LOG_LEVEL
+        value: INFO
+      # Defaults to true in config.py, which is wrong for anything deployed.
+      - key: DEMO_MODE
+        value: "false"
+
+      # --- CORS ------------------------------------------------------------
+      # Must be the browser origin of the deployed frontend, not the frontend's
+      # own hostname. Fill in after the Netlify site exists; until then every
+      # authenticated request is blocked by the browser.
+      - key: FRONTEND_URL
+        sync: false
+
+      # --- Secrets: set these in the Render dashboard, never in this file ---
+      - key: DATABASE_URL          # Supabase → Connect → Session pooler
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY          # publishable key
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: SUPABASE_JWT_AUDIENCE
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: NVIDIA_API_KEY
+        sync: false
+      # Not secret, but copy the exact values from backend/.env rather than
+      # relying on the defaults in config.py — a different model changes the
+      # output, and the wrong one fails at the first call.
+      - key: NVIDIA_BASE_URL
+        sync: false
+      - key: NVIDIA_MODEL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        sync: false
+
+      # --- AI timeouts ------------------------------------------------------
+      # The 900s job ceiling exists because an observed run took 304s; the old
+      # 300s limit killed it seconds from completion and then retried the lot.
+      - key: AI_JOB_TIMEOUT_SECONDS
+        value: "900"
+      - key: AI_REQUEST_TIMEOUT_SECONDS
+        value: "90"
+      - key: AI_MAX_RETRIES
+        value: "3"
+
+# Migrations are not run from here. The schema lives in Supabase, which is
+# reachable from anywhere, so apply it from your machine against the same
+# DATABASE_URL before the first deploy:
+#
+#   docker compose run --rm migrate
+#
+# Keeping it a separate, deliberate step means a deploy never mutates the
+# database as a side effect.
+#
+# Note on the free plan: the instance sleeps after about 15 minutes idle. The
+# first request afterwards pays a cold start, and because the analysis queue is
+# in-process, anything still queued at sleep is lost. Re-run analysis recovers
+# it. Upgrade to a paid instance to remove both behaviours.
