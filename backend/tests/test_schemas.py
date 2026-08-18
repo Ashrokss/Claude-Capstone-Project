@@ -240,3 +240,50 @@ class TestPaginationMeta:
     def test_page_count_rounds_up(self, total, page_size, expected_pages):
         meta = PaginationMeta.build(total=total, page=1, page_size=page_size)
         assert meta.total_pages == expected_pages
+
+
+class TestDecisionReadEmailHandling:
+    """
+    `reviewer_email` is stored from the identity provider's token, not from a
+    client payload, so the read schema must not re-validate it.
+
+    email-validator rejects RFC 2606 reserved TLDs such as .test, so a decision
+    recorded by adjuster@vericlaim.test made every later read of that claim
+    fail. Validation belongs on the write path, where DecisionCreate applies it.
+    """
+
+    def test_a_reserved_tld_reviewer_email_can_be_read_back(self):
+        from app.schemas.decision_schemas import DecisionRead
+
+        decision = DecisionRead.model_validate(
+            SimpleNamespace(
+                id=uuid4(),
+                claim_id=uuid4(),
+                decision="APPROVED",
+                reviewer_name="R. Iyer",
+                reviewer_email="adjuster@vericlaim.test",
+                reviewer_id=uuid4(),
+                decision_comments=None,
+                requested_information=None,
+                investigation_notes=None,
+                created_at=datetime.now(timezone.utc),
+            )
+        )
+        assert decision.reviewer_email == "adjuster@vericlaim.test"
+
+    def test_the_write_path_still_rejects_a_reserved_tld(self):
+        # Loosening the read schema must not loosen what a client may submit.
+        with pytest.raises(ValidationError):
+            DecisionCreate(
+                decision=DecisionType.APPROVED,
+                reviewer_name="R. Iyer",
+                reviewer_email="someone@vericlaim.test",
+            )
+
+    def test_the_write_path_still_accepts_a_real_address(self):
+        decision = DecisionCreate(
+            decision=DecisionType.APPROVED,
+            reviewer_name="R. Iyer",
+            reviewer_email="adjuster@example.com",
+        )
+        assert decision.reviewer_email == "adjuster@example.com"

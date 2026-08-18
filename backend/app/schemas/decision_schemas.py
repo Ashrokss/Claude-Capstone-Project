@@ -65,7 +65,14 @@ class DecisionRead(ORMModel):
 
     decision: DecisionType
     reviewer_name: str
-    reviewer_email: Optional[EmailStr] = None
+    # Deliberately str, not EmailStr. This value is not supplied by a client:
+    # decisions.py stores whatever the identity provider put in the token.
+    # Re-validating it on the way out cannot improve the stored data, and it can
+    # fail — email-validator rejects reserved TLDs such as .test, so a decision
+    # recorded by adjuster@vericlaim.test made every later read of that claim
+    # return 500. Validation belongs on the write path, where DecisionCreate
+    # already applies it.
+    reviewer_email: Optional[str] = None
     reviewer_id: Optional[UUID] = None
 
     decision_comments: Optional[str] = None
