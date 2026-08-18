@@ -77,6 +77,21 @@ These values are also compiled into the client bundle at build time, not read
 at startup — so changing any `NEXT_PUBLIC_*` variable needs a
 `docker compose build`, not just a restart.
 
+### localhost vs 127.0.0.1
+
+A browser treats `http://localhost:3000` and `http://127.0.0.1:3000` as
+different origins even though they reach the same machine, so a page opened on
+one while the API trusts the other has every request blocked at the CORS
+preflight. The backend therefore accepts all loopback spellings of whatever
+`FRONTEND_URL` is set to, and either address works.
+
+Reaching the app from another device on your network needs its origin added
+explicitly, since that is a genuinely different host:
+
+```bash
+EXTRA_CORS_ORIGINS=http://192.168.1.50:3000
+```
+
 ## Running without Docker
 
 ```bash

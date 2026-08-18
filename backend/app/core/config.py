@@ -5,6 +5,8 @@ This module loads environment variables and provides configuration
 across the application with type safety using Pydantic Settings.
 """
 
+from urllib.parse import urlsplit
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -114,11 +116,62 @@ class Settings(BaseSettings):
         Returned as an explicit list rather than a wildcard: the API is called
         with credentials, and browsers reject `Access-Control-Allow-Origin: *`
         on credentialed requests.
+
+        Loopback spellings are expanded automatically. A browser treats
+        http://localhost:3000 and http://127.0.0.1:3000 as different origins, so
+        opening the app by the address the operator did not configure blocks
+        every API call behind an opaque "Failed to fetch". They address the same
+        machine, so trusting one and refusing the other protects nothing and
+        only costs an afternoon of debugging.
         """
-        origins = [self.frontend_url.strip()]
-        origins += [o.strip() for o in self.extra_cors_origins.split(",")]
+        configured = [self.frontend_url.strip()]
+        configured += [o.strip() for o in self.extra_cors_origins.split(",")]
+
+        origins: list[str] = []
+        for origin in (o for o in configured if o):
+            origins.append(origin)
+            origins.extend(_loopback_aliases(origin))
+
         # Preserve order, drop blanks and duplicates.
         return list(dict.fromkeys(o for o in origins if o))
+
+
+# Spellings of the loopback interface that a browser treats as distinct origins
+# but which all reach the same host.
+_LOOPBACK_HOSTS = ("localhost", "127.0.0.1", "[::1]")
+
+
+def _loopback_aliases(origin: str) -> list[str]:
+    """
+    Return the other ways of writing a loopback origin.
+
+    Args:
+        origin: An origin such as "http://localhost:3000".
+
+    Returns:
+        The equivalent origins on the same port, empty for non-loopback hosts.
+    """
+    try:
+        parsed = urlsplit(origin)
+    except ValueError:
+        return []
+
+    if parsed.hostname is None:
+        return []
+
+    host = parsed.hostname.lower()
+    # urlsplit strips the brackets from an IPv6 literal; put them back so the
+    # rebuilt origin is a valid URL.
+    normalised = "[::1]" if host == "::1" else host
+    if normalised not in _LOOPBACK_HOSTS:
+        return []
+
+    port = f":{parsed.port}" if parsed.port else ""
+    return [
+        f"{parsed.scheme}://{alias}{port}"
+        for alias in _LOOPBACK_HOSTS
+        if alias != normalised
+    ]
 
 
 # Global settings instance

@@ -79,12 +79,11 @@ async function request<T>(
   } catch {
     // fetch() rejects with a bare TypeError ("Failed to fetch") for anything
     // that never reached the server: the API being down, a restart mid-request,
-    // a blocked CORS preflight, no network. That message means nothing to a
-    // user, so it is replaced with one that says what to do.
-    throw new ApiError(0, {
-      error: "NETWORK",
-      message: `Could not reach the claims service at ${BASE_URL}. It may be restarting — check your connection and try again.`,
-    });
+    // a blocked CORS preflight, no network. The browser deliberately does not
+    // say which, so the message names both ends of the call — a page opened on
+    // an address the API does not allow is otherwise indistinguishable from an
+    // API that is simply down, and the two have very different fixes.
+    throw new ApiError(0, { error: "NETWORK", message: networkErrorMessage() });
   }
 
   if (response.status === 204) {
@@ -101,6 +100,44 @@ async function request<T>(
   }
 
   return payload as T;
+}
+
+/**
+ * Build the message shown when a request never reached the server.
+ *
+ * A browser treats http://localhost:3000 and http://127.0.0.1:3000 as different
+ * origins. Opening the app on the spelling the API was not configured for
+ * blocks every call at the CORS preflight, which surfaces as the same opaque
+ * failure as an unreachable service. Naming the page's own origin makes that
+ * case visible instead of leaving it to be guessed at.
+ */
+function networkErrorMessage(): string {
+  if (typeof window === "undefined") {
+    return `Could not reach the claims service at ${BASE_URL}.`;
+  }
+
+  const pageOrigin = window.location.origin;
+  const base = `Could not reach the claims service at ${BASE_URL} from ${pageOrigin}.`;
+
+  let apiHost: string;
+  try {
+    apiHost = new URL(BASE_URL).hostname;
+  } catch {
+    return `${base} It may be restarting — try again in a moment.`;
+  }
+
+  // Same machine, different spelling: the likely cause is a blocked preflight.
+  const loopback = ["localhost", "127.0.0.1", "[::1]", "::1"];
+  const mismatched =
+    loopback.includes(apiHost) &&
+    loopback.includes(window.location.hostname) &&
+    apiHost !== window.location.hostname;
+
+  if (mismatched) {
+    return `${base} This page is open on ${window.location.hostname} while the API expects ${apiHost}; a browser treats those as different sites. Open the app at ${window.location.protocol}//${apiHost}:${window.location.port} instead.`;
+  }
+
+  return `${base} It may be restarting — check your connection and try again.`;
 }
 
 export interface ClaimQuery {

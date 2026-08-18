@@ -290,3 +290,68 @@ class TestFailClosed:
         )
         assert response.status_code == 500
         assert response.status_code != 200
+
+
+class TestLoopbackCorsAliases:
+    """
+    A browser treats localhost and 127.0.0.1 as different origins.
+
+    Opening the app on the spelling the operator did not configure blocked every
+    API call at the preflight, surfacing as an opaque "Failed to fetch". They
+    reach the same machine, so all loopback spellings of a configured loopback
+    origin are accepted.
+    """
+
+    def test_localhost_origin_expands_to_its_aliases(self, monkeypatch):
+        monkeypatch.setattr(settings, "frontend_url", "http://localhost:3000")
+        monkeypatch.setattr(settings, "extra_cors_origins", "")
+        assert set(settings.cors_origins) == {
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://[::1]:3000",
+        }
+
+    def test_expansion_works_from_the_other_spelling_too(self, monkeypatch):
+        monkeypatch.setattr(settings, "frontend_url", "http://127.0.0.1:3000")
+        monkeypatch.setattr(settings, "extra_cors_origins", "")
+        assert "http://localhost:3000" in settings.cors_origins
+
+    def test_the_port_is_preserved(self, monkeypatch):
+        monkeypatch.setattr(settings, "frontend_url", "http://localhost:4321")
+        monkeypatch.setattr(settings, "extra_cors_origins", "")
+        assert "http://127.0.0.1:4321" in settings.cors_origins
+        assert "http://127.0.0.1:3000" not in settings.cors_origins
+
+    def test_a_public_domain_is_not_expanded(self, monkeypatch):
+        # Only loopback is aliased; a real host must not gain extra origins.
+        monkeypatch.setattr(settings, "frontend_url", "https://claims.example.com")
+        monkeypatch.setattr(settings, "extra_cors_origins", "")
+        assert settings.cors_origins == ["https://claims.example.com"]
+
+    def test_scheme_is_preserved(self, monkeypatch):
+        monkeypatch.setattr(settings, "frontend_url", "https://localhost:3000")
+        monkeypatch.setattr(settings, "extra_cors_origins", "")
+        assert all(o.startswith("https://") for o in settings.cors_origins)
+
+    def test_extra_origins_are_expanded_as_well(self, monkeypatch):
+        monkeypatch.setattr(settings, "frontend_url", "http://localhost:3000")
+        monkeypatch.setattr(settings, "extra_cors_origins", "http://localhost:4000")
+        assert "http://127.0.0.1:4000" in settings.cors_origins
+
+    def test_a_malformed_origin_does_not_raise(self, monkeypatch):
+        monkeypatch.setattr(settings, "frontend_url", "not a url")
+        monkeypatch.setattr(settings, "extra_cors_origins", "")
+        assert settings.cors_origins == ["not a url"]
+
+    def test_the_preflight_is_granted_from_both_spellings(self, client, monkeypatch):
+        for origin in ("http://localhost:3000", "http://127.0.0.1:3000"):
+            response = client.options(
+                "/api/claims",
+                headers={
+                    "Origin": origin,
+                    "Access-Control-Request-Method": "GET",
+                    "Access-Control-Request-Headers": "authorization",
+                },
+            )
+            assert response.status_code == 200, origin
+            assert response.headers.get("access-control-allow-origin") == origin
