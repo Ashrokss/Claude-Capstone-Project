@@ -12,6 +12,14 @@
   command = "npm run build"
   publish = ".next"
 
+# Without this, Netlify auto-detection did not engage the Next.js runtime: the
+# build succeeded, `.next` was published as a directory of static files, and
+# every route returned 404 while /BUILD_ID returned 200. Declaring the plugin
+# is explicit and is a no-op if the runtime would have loaded anyway. Netlify
+# installs it during the build, so it does not belong in package.json.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
 [build.environment]
   NODE_VERSION = "22"
   NEXT_TELEMETRY_DISABLED = "1"
