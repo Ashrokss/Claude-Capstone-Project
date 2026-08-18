@@ -62,11 +62,25 @@ export default function SubmitClaimPage() {
   const [images, setImages] = useState<File[]>([]);
   const [documents, setDocuments] = useState<File[]>([]);
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [imageError, setImageError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<ApiError | Error | null>(null);
   const [busy, setBusy] = useState(false);
   const [progressNote, setProgressNote] = useState<string | null>(null);
 
   function goNext() {
+    // The damage photograph is what the vision model reads. Without it the
+    // assessment comes back with no damage items and no repair estimate, which
+    // is a worse outcome than being asked for a photo now.
+    if (step === 3 && images.length === 0) {
+      setImageError("Add at least one photograph of the damage.");
+      document.getElementById("damage-photographs")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      return;
+    }
+    setImageError(null);
+
     const found = validateStep(step, form);
     setErrors(found);
     if (Object.keys(found).length > 0) {
@@ -95,6 +109,16 @@ export default function SubmitClaimPage() {
         setStep(s);
         return;
       }
+    }
+
+    // `step` is persisted but File objects cannot be, so a refresh lands back on
+    // step 4 with the selection silently emptied. Re-check here rather than
+    // trusting that goNext already ran.
+    if (images.length === 0) {
+      setImageError("Add at least one photograph of the damage.");
+      setStep(3);
+      window.scrollTo({ top: 0 });
+      return;
     }
 
     setBusy(true);
@@ -208,15 +232,22 @@ export default function SubmitClaimPage() {
         {step === 3 ? (
           <div className="flex flex-col gap-8">
             <StepDamage errors={errors} />
-            <FileDrop
-              label="Damage photographs"
-              hint="Clear shots of each damaged area, plus one of the whole vehicle."
-              accept=".jpg,.jpeg,.png"
-              maxSizeMb={5}
-              files={images}
-              onChange={setImages}
-              disabled={busy}
-            />
+            <div id="damage-photographs">
+              <FileDrop
+                label="Damage photographs"
+                hint="Clear shots of each damaged area, plus one of the whole vehicle. At least one is needed — this is what the damage assessment reads."
+                accept=".jpg,.jpeg,.png"
+                maxSizeMb={5}
+                files={images}
+                onChange={(next) => {
+                  setImages(next);
+                  if (next.length) setImageError(null);
+                }}
+                disabled={busy}
+                required
+                error={imageError}
+              />
+            </div>
           </div>
         ) : null}
 

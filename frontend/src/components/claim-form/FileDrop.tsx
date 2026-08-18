@@ -19,6 +19,8 @@ export function FileDrop({
   files,
   onChange,
   disabled,
+  required,
+  error: externalError,
 }: {
   label: string;
   hint: string;
@@ -27,10 +29,17 @@ export function FileDrop({
   files: File[];
   onChange: (files: File[]) => void;
   disabled?: boolean;
+  required?: boolean;
+  /** Validation message from the surrounding form, e.g. "at least one needed". */
+  error?: string | null;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [rejection, setRejection] = useState<string | null>(null);
+
+  // A file the picker itself refused takes precedence: it is about the action
+  // just taken, whereas the form's message is about the step as a whole.
+  const error = rejection ?? externalError ?? null;
 
   const extensions = accept
     .split(",")
@@ -65,7 +74,7 @@ export function FileDrop({
         if (!duplicate) accepted.push(file);
       });
 
-      setError(problems.length ? problems.join(". ") : null);
+      setRejection(problems.length ? problems.join(". ") : null);
       if (accepted.length) onChange([...files, ...accepted]);
     },
     [accept_, files, maxSizeMb, onChange]
@@ -74,7 +83,14 @@ export function FileDrop({
   return (
     <div className="flex flex-col gap-2">
       <div>
-        <p className="text-sm font-semibold text-[#101923]">{label}</p>
+        <p className="text-sm font-semibold text-[#101923]">
+          {label}
+          {required ? (
+            <span className="ml-1 text-[#d14a42]" aria-hidden>
+              *
+            </span>
+          ) : null}
+        </p>
         <p className="mt-0.5 text-xs text-[#5c6b78]">{hint}</p>
       </div>
 
