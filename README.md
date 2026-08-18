@@ -96,7 +96,7 @@ npm run dev
 ## Tests
 
 ```bash
-cd backend && python -m pytest tests/ -q     # 221 tests
+cd backend && python -m pytest tests/ -q     # 254 tests
 cd frontend && npm run lint && npm run build
 ```
 
@@ -114,6 +114,25 @@ Supabase → Authentication → Users → (user) → and add to **app_metadata**
 ```
 
 Valid roles are `customer`, `claims_employee`, and `admin`.
+
+`admin` is recognised throughout the code, but it currently grants nothing
+beyond `claims_employee`: every protected route uses `require_staff()`, which
+admits both. The role exists as the seam for admin-only features (user
+management, configuration, audit access) rather than as a live privilege level
+today. Use `require_roles(UserRole.ADMIN)` when adding one.
+
+## Test accounts
+
+Created with confirmed email addresses, so no inbox is needed:
+
+| Email | Password | Role |
+| --- | --- | --- |
+| `customer@vericlaim.test` | `TestPass123!` | customer |
+| `adjuster@vericlaim.test` | `TestPass123!` | claims_employee |
+| `admin@vericlaim.test` | `TestPass123!` | admin |
+
+These exist only in the development project. Delete them before this is ever
+pointed at anything real.
 
 ## Project layout
 
