@@ -63,24 +63,26 @@ export default function SubmitClaimPage() {
   const [documents, setDocuments] = useState<File[]>([]);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [imageError, setImageError] = useState<string | null>(null);
+  const [documentError, setDocumentError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<ApiError | Error | null>(null);
   const [busy, setBusy] = useState(false);
   const [progressNote, setProgressNote] = useState<string | null>(null);
 
-  function goNext() {
-    // The damage photograph is what the vision model reads. Without it the
-    // assessment comes back with no damage items and no repair estimate, which
-    // is a worse outcome than being asked for a photo now.
-    if (step === 3 && images.length === 0) {
-      setImageError("Add at least one photograph of the damage.");
-      document.getElementById("damage-photographs")?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-      return;
-    }
-    setImageError(null);
+  /**
+   * Report missing evidence and bring the picker into view.
+   *
+   * Evidence is not part of the form store — File objects cannot be persisted
+   * — so it cannot be checked by validateStep alongside the text fields.
+   */
+  function flagEvidence(anchor: string, set: (message: string) => void, message: string) {
+    set(message);
+    document.getElementById(anchor)?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }
 
+  function goNext() {
     const found = validateStep(step, form);
     setErrors(found);
     if (Object.keys(found).length > 0) {
@@ -89,6 +91,27 @@ export default function SubmitClaimPage() {
       document.getElementById(Object.keys(found)[0])?.focus();
       return;
     }
+
+    // Both uploads decide half the assessment: the policy document is what
+    // coverage is judged against, and the photograph is what the damage and
+    // repair estimate come from. A claim missing either produces an assessment
+    // with that half blank, so ask here rather than let an adjuster open a
+    // claim that could never have been assessed.
+    if (step === 2 && documents.length === 0) {
+      flagEvidence("supporting-documents", setDocumentError, "Add your policy document.");
+      return;
+    }
+    if (step === 3 && images.length === 0) {
+      flagEvidence(
+        "damage-photographs",
+        setImageError,
+        "Add at least one photograph of the damage."
+      );
+      return;
+    }
+
+    setDocumentError(null);
+    setImageError(null);
     setStep(Math.min(step + 1, TOTAL_STEPS));
     window.scrollTo({ top: 0 });
   }
@@ -112,8 +135,15 @@ export default function SubmitClaimPage() {
     }
 
     // `step` is persisted but File objects cannot be, so a refresh lands back on
-    // step 4 with the selection silently emptied. Re-check here rather than
-    // trusting that goNext already ran.
+    // step 4 with both selections silently emptied. Re-check here rather than
+    // trusting that goNext already ran. Documents first, so the user is returned
+    // to the earlier of the two steps they need to revisit.
+    if (documents.length === 0) {
+      setDocumentError("Add your policy document.");
+      setStep(2);
+      window.scrollTo({ top: 0 });
+      return;
+    }
     if (images.length === 0) {
       setImageError("Add at least one photograph of the damage.");
       setStep(3);
@@ -217,15 +247,22 @@ export default function SubmitClaimPage() {
         {step === 2 ? (
           <div className="flex flex-col gap-8">
             <StepIncident errors={errors} />
-            <FileDrop
-              label="Supporting documents"
-              hint="Your policy, a police or accident report, or a repair estimate. Optional, but a policy document lets us check your coverage."
-              accept=".pdf,.jpg,.jpeg,.png"
-              maxSizeMb={10}
-              files={documents}
-              onChange={setDocuments}
-              disabled={busy}
-            />
+            <div id="supporting-documents">
+              <FileDrop
+                label="Supporting documents"
+                hint="Your policy schedule, and anything else that helps — a police or accident report, or a repair estimate. The policy is what your coverage is checked against, so at least one document is needed."
+                accept=".pdf,.jpg,.jpeg,.png"
+                maxSizeMb={10}
+                files={documents}
+                onChange={(next) => {
+                  setDocuments(next);
+                  if (next.length) setDocumentError(null);
+                }}
+                disabled={busy}
+                required
+                error={documentError}
+              />
+            </div>
           </div>
         ) : null}
 
