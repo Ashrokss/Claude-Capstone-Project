@@ -49,7 +49,7 @@ keep it a separate, considered step.
 1. Render dashboard → **New** → **Blueprint** → select this repository.
    `render.yaml` is picked up automatically.
 2. Render will prompt for every variable marked `sync: false`. Copy them from
-   `backend/.env`:
+   the repository-root `.env`:
 
    | Variable | Source |
    | --- | --- |
@@ -57,8 +57,8 @@ keep it a separate, considered step.
    | `SUPABASE_URL`, `SUPABASE_KEY` | Settings → General, Settings → API Keys |
    | `SUPABASE_SERVICE_ROLE_KEY` | Settings → API Keys → Secret keys |
    | `SUPABASE_JWT_SECRET`, `SUPABASE_JWT_AUDIENCE` | Settings → JWT Keys |
-   | `NVIDIA_API_KEY`, `NVIDIA_BASE_URL`, `NVIDIA_MODEL` | your `backend/.env` |
-   | `GEMINI_API_KEY`, `GEMINI_MODEL` | your `backend/.env` |
+   | `NVIDIA_API_KEY`, `NVIDIA_BASE_URL`, `NVIDIA_MODEL` | your `.env` |
+   | `GEMINI_API_KEY`, `GEMINI_MODEL` | your `.env` |
    | `FRONTEND_URL` | leave as a placeholder for now; step 4 fixes it |
 
 3. Deploy, then confirm `https://<service>.onrender.com/health` returns 200.
@@ -143,8 +143,7 @@ hosting. It does not improve on a bigger instance.
 
 ## Known issues that affect a deployed demo
 
-Both are in `KNOWN_ISSUES.md` in the submission package, and both bite harder in
-a hosted environment than locally.
+Both bite harder in a hosted environment than they do locally.
 
 **Evidence uploads race the first analysis.** `POST /claims` queues analysis
 before the browser has finished uploading, so a freshly submitted claim can be

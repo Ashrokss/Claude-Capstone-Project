@@ -69,7 +69,7 @@ services:
         generateValue: true
       - key: NVIDIA_API_KEY
         sync: false
-      # Not secret, but copy the exact values from backend/.env rather than
+      # Not secret, but copy the exact values from the repository-root .env rather than
       # relying on the defaults in config.py — a different model changes the
       # output, and the wrong one fails at the first call.
       - key: NVIDIA_BASE_URL

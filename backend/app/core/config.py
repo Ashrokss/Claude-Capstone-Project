@@ -5,9 +5,18 @@ This module loads environment variables and provides configuration
 across the application with type safety using Pydantic Settings.
 """
 
+from pathlib import Path
 from urllib.parse import urlsplit
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# One .env at the repository root configures both services. Resolved from this
+# file rather than the working directory, because a bare ".env" silently loads
+# nothing when the app is started from anywhere other than backend/ — and a
+# missing config file that raises no error is worse than one that does.
+# In the container there is no repository, and the values arrive as real
+# environment variables; a path that does not exist is simply ignored.
+_ENV_FILE = Path(__file__).resolve().parents[3] / ".env"
 
 
 class Settings(BaseSettings):
@@ -93,7 +102,7 @@ class Settings(BaseSettings):
     ai_job_timeout_seconds: int = 900
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_ENV_FILE,
         case_sensitive=False,
         extra="ignore",
     )

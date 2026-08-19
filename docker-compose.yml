@@ -1,12 +1,20 @@
 # VeriClaim AI — local stack.
 #
 # There is no database service: the app uses hosted Supabase, so both
-# containers reach out to it over the internet. Configure it in backend/.env
-# and .env before starting.
+# containers reach out to it over the internet. Configure everything in the
+# single .env at the repository root, which compose reads automatically.
 #
 #   docker compose up --build
 #
 # Then open http://localhost:3000
+#
+# Why the backend lists its variables by name instead of using `env_file`:
+# one file now holds both services' configuration, and `env_file` would hand
+# the whole of it to whichever container names it. The frontend has no business
+# holding the service role key, the JWT secret or the AI keys, so each service
+# is given only what it needs. The cost is that a new backend setting must be
+# added here as well as to .env — a deliberate trade for keeping secrets out of
+# the container that faces the browser.
 #
 # One thing worth understanding about NEXT_PUBLIC_API_URL: the requests to the
 # backend are made by JavaScript running in your browser, not by the frontend
@@ -20,20 +28,50 @@ services:
       context: ./backend
     image: vericlaim-backend:local
     container_name: vericlaim-backend
-    # Supplies Supabase credentials, AI keys, and model names. Compose fails
-    # loudly if this file is missing, which is better than a container that
-    # starts and then rejects every request.
-    env_file:
-      - ./backend/.env
     environment:
-      # Overrides whatever the .env says, so the container is not told to bind
-      # to a host or port that does not match the mapping below.
+      # Overrides whatever .env says, so the container is not told to bind to a
+      # host or port that does not match the mapping below.
       HOST: 0.0.0.0
       PORT: "8000"
       RELOAD: "false"
+
       # The browser origin, for CORS. The frontend container's own hostname is
       # irrelevant here for the same reason as NEXT_PUBLIC_API_URL above.
       FRONTEND_URL: ${FRONTEND_ORIGIN:-http://localhost:3000}
+      EXTRA_CORS_ORIGINS: ${EXTRA_CORS_ORIGINS:-}
+
+      # Supabase.
+      SUPABASE_URL: ${SUPABASE_URL:?set SUPABASE_URL in .env}
+      SUPABASE_KEY: ${SUPABASE_KEY:?set SUPABASE_KEY in .env}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?set SUPABASE_SERVICE_ROLE_KEY in .env}
+      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET:?set SUPABASE_JWT_SECRET in .env}
+      SUPABASE_JWT_AUDIENCE: ${SUPABASE_JWT_AUDIENCE:-authenticated}
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL in .env}
+
+      # AI providers.
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
+      NVIDIA_BASE_URL: ${NVIDIA_BASE_URL:-https://integrate.api.nvidia.com/v1}
+      NVIDIA_MODEL: ${NVIDIA_MODEL:-meta/llama-3.1-70b-instruct}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-latest}
+      AI_REQUEST_TIMEOUT_SECONDS: ${AI_REQUEST_TIMEOUT_SECONDS:-90}
+      AI_MAX_RETRIES: ${AI_MAX_RETRIES:-3}
+      AI_JOB_TIMEOUT_SECONDS: ${AI_JOB_TIMEOUT_SECONDS:-900}
+
+      # Application.
+      APP_NAME: ${APP_NAME:-VeriClaim AI MVP}
+      APP_VERSION: ${APP_VERSION:-0.1.0}
+      DEMO_MODE: ${DEMO_MODE:-false}
+      DEBUG: ${DEBUG:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      SQL_ECHO: ${SQL_ECHO:-false}
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      MAX_IMAGE_SIZE_MB: ${MAX_IMAGE_SIZE_MB:-5}
+      MAX_DOCUMENT_SIZE_MB: ${MAX_DOCUMENT_SIZE_MB:-10}
+      ALLOWED_IMAGE_FORMATS: ${ALLOWED_IMAGE_FORMATS:-jpg,jpeg,png}
+      ALLOWED_DOCUMENT_FORMATS: ${ALLOWED_DOCUMENT_FORMATS:-pdf,jpg,jpeg,png}
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     healthcheck:
@@ -53,11 +91,12 @@ services:
         NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?set NEXT_PUBLIC_SUPABASE_URL in .env}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set NEXT_PUBLIC_SUPABASE_ANON_KEY in .env}
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        NEXT_PUBLIC_ALLOW_SIGNUP: ${NEXT_PUBLIC_ALLOW_SIGNUP:-true}
     image: vericlaim-frontend:local
     container_name: vericlaim-frontend
     environment:
       # Read by proxy.ts during server-side session checks, which do run inside
-      # the container.
+      # the container. Nothing secret appears here — only the publishable key.
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
@@ -74,8 +113,11 @@ services:
     build:
       context: ./backend
     image: vericlaim-backend:local
-    env_file:
-      - ./backend/.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL in .env}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_KEY: ${SUPABASE_KEY:-}
+      SECRET_KEY: ${SECRET_KEY:-migrations-do-not-sign-tokens}
     command: ["alembic", "-c", "migrations/alembic.ini", "upgrade", "head"]
     profiles: ["tools"]
     restart: "no"

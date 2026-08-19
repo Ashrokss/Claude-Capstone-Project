@@ -206,25 +206,38 @@ Works with Docker Desktop, Rancher Desktop, or any `dockerd` plus Compose v2.
 
 ### 1. Configure
 
-Two env files are needed. Neither is committed.
+One file, at the repository root. It is not committed.
 
-**`backend/.env`** — copy from `backend/.env.example` and fill in:
+```bash
+cp .env.example .env
+```
+
+Fill in:
 
 | Variable | Where to find it |
 | --- | --- |
-| `DATABASE_URL` | Supabase → Connect → Connection string → **Session pooler** |
-| `SUPABASE_URL` | Supabase → Settings → General → Project URL |
-| `SUPABASE_KEY` | Settings → API Keys → Publishable key |
+| `DATABASE_URL` | Supabase → Connect → **Session pooler** |
+| `SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL` | Settings → General → Project URL |
+| `SUPABASE_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Settings → API Keys → Publishable key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Settings → API Keys → Secret keys → New secret key |
 | `SUPABASE_JWT_SECRET` | Settings → JWT Keys |
 | `NVIDIA_API_KEY` | [build.nvidia.com](https://build.nvidia.com) |
 | `GEMINI_API_KEY` | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+| `SECRET_KEY` | Any random string. Generate a fresh one per environment. |
+
+The Supabase URL and publishable key appear twice under different names — once
+for the backend, once with the `NEXT_PUBLIC_` prefix the browser bundle needs.
+Both are public by design.
 
 Use the **session pooler** connection string, not the direct connection: on the
 free tier the direct endpoint is IPv6-only and will time out on most networks.
 
-**`.env`** at the repo root — copy from `.env.example`. It holds only the
-frontend's browser-visible values, so nothing secret belongs in it.
+> **One rule.** Anything named `NEXT_PUBLIC_*` is compiled into the browser
+> bundle and is public forever. Everything else stays server-side:
+> `docker-compose.yml` passes variables to each container by name, so the
+> frontend is never handed the service role key, the JWT secret or the AI keys.
+> Adding a `NEXT_PUBLIC_` prefix to make a value reachable from the browser
+> publishes it — if the browser needs it, it is not a secret.
 
 ### 2. Start
 
@@ -290,7 +303,7 @@ uvicorn app.main:app --reload
 # Frontend, in a second terminal
 cd frontend
 npm install
-cp .env.example .env.local   # then fill it in
+cp ../.env.example ../.env   # one file at the repo root, then fill it in
 npm run dev
 ```
 
