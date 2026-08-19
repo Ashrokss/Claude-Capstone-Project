@@ -325,20 +325,40 @@ today. Use `require_roles(UserRole.ADMIN)` when adding one.
 ## Project layout
 
 ```
-backend/
-  app/
-    api/endpoints/    claims, evidence, assessment, decisions, analytics
-    core/             config, database, security, middleware, errors, logging
-    models/           SQLAlchemy ORM
-    schemas/          Pydantic request/response contracts
-    services/         claim + storage logic, AI clients, orchestrator, job queue
-  migrations/         Alembic
-  tests/
-frontend/
-  src/
-    app/              routes (App Router)
-    components/       UI primitives, claim form, claim detail, dashboard
-    hooks/ lib/ store/
-.kiro/specs/          requirements, design, and task plan
-docs/                 PRD
+.
+├── backend/
+│   ├── app/
+│   │   ├── api/endpoints/      claims · evidence · assessment · decisions · analytics
+│   │   ├── core/               config · database · security · middleware · errors · logging
+│   │   ├── models/             SQLAlchemy ORM — claim, assessment, evidence, decision
+│   │   ├── schemas/            Pydantic request/response contracts
+│   │   ├── services/
+│   │   │   ├── ai/
+│   │   │   │   ├── nvidia_client.py     text reasoning
+│   │   │   │   ├── gemini_client.py     vision
+│   │   │   │   ├── orchestrator.py      the seven analysis steps
+│   │   │   │   └── base.py              defensive parsing of model output
+│   │   │   ├── claim_service.py
+│   │   │   ├── document_text.py         dispatches on the file's actual bytes
+│   │   │   ├── job_queue.py             in-process analysis workers
+│   │   │   └── storage_service.py       Supabase Storage
+│   │   └── main.py
+│   ├── migrations/             Alembic
+│   ├── tests/                  262 tests, no credentials needed
+│   └── Dockerfile
+├── frontend/
+│   ├── src/
+│   │   ├── app/                routes (App Router)
+│   │   ├── components/         UI primitives · claim form · claim detail · dashboard
+│   │   ├── hooks/  lib/  store/
+│   │   └── proxy.ts            session refresh and route guard
+│   └── Dockerfile
+├── docs/
+│   ├── Valor_AI_Claims_Copilot_PRD.md
+│   └── screenshots/            the 22 images above
+├── .kiro/specs/                requirements, design, and task plan
+├── docker-compose.yml          local stack
+├── netlify.toml                frontend deploy
+├── render.yaml                 backend deploy
+└── DEPLOYMENT.md               why the backend is a container, not a function
 ```
